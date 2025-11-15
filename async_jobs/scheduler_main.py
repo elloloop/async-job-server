@@ -1,11 +1,12 @@
 """Scheduler main entry point."""
+
 import argparse
 import asyncio
 import logging
 import sys
 
 import boto3
-import psycopg
+from psycopg_pool import AsyncConnectionPool
 
 from async_jobs.config import AsyncJobsConfig
 from async_jobs.ddl import get_ddl
@@ -36,7 +37,7 @@ async def async_main():
     logger.info("Configuration loaded")
 
     # Initialize database pool
-    db_pool = psycopg.AsyncConnectionPool(
+    db_pool = AsyncConnectionPool(
         conninfo=config.db_dsn,
         min_size=2,
         max_size=10,

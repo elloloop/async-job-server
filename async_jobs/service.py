@@ -1,7 +1,8 @@
 """Job service business logic."""
+
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Optional
 
 from async_jobs.config import AsyncJobsConfig
 from async_jobs.errors import QuotaExceededError
@@ -25,7 +26,8 @@ class JobService:
             pending_count = await self.store.count_pending_jobs_for_tenant(request.tenant_id)
             if pending_count >= quota.max_pending_jobs:
                 raise QuotaExceededError(
-                    f"Tenant {request.tenant_id} has exceeded quota of {quota.max_pending_jobs} pending jobs"
+                    f"Tenant {request.tenant_id} has exceeded quota "
+                    f"of {quota.max_pending_jobs} pending jobs"
                 )
 
         # Get use case config for defaults
@@ -74,7 +76,7 @@ class JobService:
         use_case: Optional[str] = None,
         status: Optional[JobStatus] = None,
         limit: int = 100,
-    ) -> List[Job]:
+    ) -> list[Job]:
         """List jobs with optional filters."""
         return await self.store.list_jobs(
             tenant_id=tenant_id, use_case=use_case, status=status, limit=limit
@@ -82,10 +84,10 @@ class JobService:
 
     async def lease_jobs_for_use_case(
         self, use_case: str, max_jobs: int, lease_duration: timedelta
-    ) -> List[Job]:
+    ) -> list[Job]:
         """Lease jobs for a use case for scheduling."""
         now = datetime.utcnow()
-        
+
         # Select pending jobs
         jobs = await self.store.select_pending_jobs_for_scheduling(
             use_case=use_case, limit=max_jobs, now=now
@@ -110,7 +112,7 @@ class JobService:
     async def mark_job_retry(
         self,
         job_id: uuid.UUID,
-        error: Dict,
+        error: dict,
         backoff_seconds: int,
     ) -> Job:
         """Mark a job for retry with backoff."""
@@ -125,7 +127,7 @@ class JobService:
             run_at=run_at,
         )
 
-    async def mark_job_dead(self, job_id: uuid.UUID, error: Dict) -> Job:
+    async def mark_job_dead(self, job_id: uuid.UUID, error: dict) -> Job:
         """Mark a job as dead (max retries exceeded)."""
         job = await self.store.get_job(job_id)
         attempts = job.attempts + 1

@@ -1,8 +1,9 @@
 """Configuration management for async jobs."""
+
 import json
 import os
-from dataclasses import dataclass, field
-from typing import Dict, Optional
+from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -26,8 +27,8 @@ class AsyncJobsConfig:
     """Main configuration for async jobs."""
 
     db_dsn: str
-    use_case_configs: Dict[str, UseCaseConfig]
-    per_tenant_quotas: Dict[str, TenantQuota]
+    use_case_configs: dict[str, UseCaseConfig]
+    per_tenant_quotas: dict[str, TenantQuota]
     enqueue_auth_token: Optional[str] = None
     scheduler_interval_seconds: int = 5
     worker_poll_interval_seconds: int = 1

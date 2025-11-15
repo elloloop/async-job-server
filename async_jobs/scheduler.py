@@ -1,12 +1,12 @@
 """Scheduler for async jobs."""
+
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
-import boto3
-import psycopg
+from psycopg_pool import AsyncConnectionPool
 
 from async_jobs.config import AsyncJobsConfig
 from async_jobs.service import JobService
@@ -15,7 +15,7 @@ from async_jobs.store import JobStore
 
 async def run_scheduler_loop(
     config: AsyncJobsConfig,
-    db_pool: psycopg.AsyncConnectionPool,
+    db_pool: AsyncConnectionPool,
     sqs_client: Any,
     logger: logging.Logger,
 ):

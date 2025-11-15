@@ -1,11 +1,12 @@
 """Database store for async jobs."""
+
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
-import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 
 from async_jobs.errors import JobNotFoundError
 from async_jobs.models import Job, JobStatus
@@ -14,7 +15,7 @@ from async_jobs.models import Job, JobStatus
 class JobStore:
     """Database store for job operations."""
 
-    def __init__(self, pool: psycopg.AsyncConnectionPool):
+    def __init__(self, pool: AsyncConnectionPool):
         """Initialize the job store."""
         self.pool = pool
 
@@ -25,13 +26,13 @@ class JobStore:
         use_case: str,
         type: str,
         queue: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         run_at: datetime,
         delay_tolerance: timedelta,
         deadline_at: datetime,
         priority: int,
         max_attempts: int,
-        backoff_policy: Dict[str, Any],
+        backoff_policy: dict[str, Any],
         dedupe_key: Optional[str] = None,
     ) -> Job:
         """Insert a new job into the database."""
@@ -88,10 +89,10 @@ class JobStore:
         use_case: Optional[str] = None,
         status: Optional[JobStatus] = None,
         limit: int = 100,
-    ) -> List[Job]:
+    ) -> list[Job]:
         """List jobs with optional filters."""
         query = "SELECT * FROM jobs WHERE 1=1"
-        params: List[Any] = []
+        params: list[Any] = []
 
         if tenant_id:
             params.append(tenant_id)
@@ -126,7 +127,7 @@ class JobStore:
 
     async def select_pending_jobs_for_scheduling(
         self, use_case: str, limit: int, now: datetime
-    ) -> List[Job]:
+    ) -> list[Job]:
         """Select pending jobs ready for scheduling."""
         async with self.pool.connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
@@ -146,8 +147,8 @@ class JobStore:
                 return [self._row_to_job(row) for row in rows]
 
     async def mark_jobs_as_running_and_lease(
-        self, job_ids: List[UUID], lease_expires_at: datetime
-    ) -> List[Job]:
+        self, job_ids: list[UUID], lease_expires_at: datetime
+    ) -> list[Job]:
         """Mark jobs as running and set lease expiration."""
         async with self.pool.connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
@@ -189,7 +190,7 @@ class JobStore:
         self,
         job_id: UUID,
         attempts: int,
-        last_error: Dict[str, Any],
+        last_error: dict[str, Any],
         run_at: datetime,
     ) -> Job:
         """Update a job for retry."""
@@ -220,9 +221,7 @@ class JobStore:
                     raise JobNotFoundError(f"Job {job_id} not found")
                 return self._row_to_job(row)
 
-    async def update_job_dead(
-        self, job_id: UUID, attempts: int, last_error: Dict[str, Any]
-    ) -> Job:
+    async def update_job_dead(self, job_id: UUID, attempts: int, last_error: dict[str, Any]) -> Job:
         """Mark a job as dead."""
         async with self.pool.connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
@@ -244,7 +243,7 @@ class JobStore:
                     raise JobNotFoundError(f"Job {job_id} not found")
                 return self._row_to_job(row)
 
-    def _row_to_job(self, row: Dict[str, Any]) -> Job:
+    def _row_to_job(self, row: dict[str, Any]) -> Job:
         """Convert a database row to a Job object."""
         return Job(
             id=row["id"],
@@ -253,16 +252,26 @@ class JobStore:
             type=row["type"],
             queue=row["queue"],
             status=JobStatus(row["status"]),
-            payload=row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"]),
+            payload=(
+                row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+            ),
             run_at=row["run_at"],
             delay_tolerance=row["delay_tolerance"],
             deadline_at=row["deadline_at"],
             priority=row["priority"],
             attempts=row["attempts"],
             max_attempts=row["max_attempts"],
-            backoff_policy=row["backoff_policy"] if isinstance(row["backoff_policy"], dict) else json.loads(row["backoff_policy"]),
+            backoff_policy=(
+                row["backoff_policy"]
+                if isinstance(row["backoff_policy"], dict)
+                else json.loads(row["backoff_policy"])
+            ),
             lease_expires_at=row["lease_expires_at"],
-            last_error=row["last_error"] if row["last_error"] is None or isinstance(row["last_error"], dict) else json.loads(row["last_error"]),
+            last_error=(
+                row["last_error"]
+                if row["last_error"] is None or isinstance(row["last_error"], dict)
+                else json.loads(row["last_error"])
+            ),
             dedupe_key=row["dedupe_key"],
             enqueue_failed=row["enqueue_failed"],
             created_at=row["created_at"],

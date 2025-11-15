@@ -1,8 +1,9 @@
 """Data models for async jobs."""
-from dataclasses import dataclass, field
+
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 
@@ -26,16 +27,16 @@ class Job:
     type: str
     queue: str
     status: JobStatus
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     run_at: datetime
     delay_tolerance: timedelta
     deadline_at: datetime
     priority: int
     attempts: int
     max_attempts: int
-    backoff_policy: Dict[str, Any]
+    backoff_policy: dict[str, Any]
     lease_expires_at: Optional[datetime]
-    last_error: Optional[Dict[str, Any]]
+    last_error: Optional[dict[str, Any]]
     dedupe_key: Optional[str]
     enqueue_failed: bool
     created_at: datetime
@@ -50,10 +51,10 @@ class EnqueueJobRequest:
     use_case: str
     type: str
     queue: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     delay_tolerance_seconds: int
     max_attempts: int
-    backoff_policy: Dict[str, Any]
+    backoff_policy: dict[str, Any]
     run_at: Optional[datetime] = None
     dedupe_key: Optional[str] = None
     priority: int = 0

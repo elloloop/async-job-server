@@ -1,14 +1,13 @@
 """Worker for async jobs."""
+
 import asyncio
 import json
 import logging
 import traceback
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-import boto3
-import psycopg
+from psycopg_pool import AsyncConnectionPool
 
 from async_jobs.config import AsyncJobsConfig
 from async_jobs.models import JobContext
@@ -37,7 +36,7 @@ def calculate_backoff_seconds(backoff_policy: dict, attempt: int) -> int:
 
 async def run_worker_loop(
     config: AsyncJobsConfig,
-    db_pool: psycopg.AsyncConnectionPool,
+    db_pool: AsyncConnectionPool,
     sqs_client: Any,
     registry: JobRegistry,
     queue_name: str,
@@ -85,9 +84,7 @@ async def run_worker_loop(
                                 "message": f"No handler registered for job type: {job.type}",
                             },
                         )
-                        sqs_client.delete_message(
-                            QueueUrl=queue_name, ReceiptHandle=receipt_handle
-                        )
+                        sqs_client.delete_message(QueueUrl=queue_name, ReceiptHandle=receipt_handle)
                         continue
 
                     # Get handler
@@ -104,12 +101,10 @@ async def run_worker_loop(
 
                     # Execute handler
                     try:
-                        result = await handler(context, job.payload)
+                        await handler(context, job.payload)
                         logger.info(f"Job {job_id} succeeded")
                         await service.mark_job_succeeded(job_id)
-                        sqs_client.delete_message(
-                            QueueUrl=queue_name, ReceiptHandle=receipt_handle
-                        )
+                        sqs_client.delete_message(QueueUrl=queue_name, ReceiptHandle=receipt_handle)
                     except Exception as handler_error:
                         logger.error(f"Job {job_id} failed: {handler_error}", exc_info=True)
 

@@ -1,10 +1,10 @@
 """Job handler registry."""
-from typing import Any, Callable, Dict
+
+from typing import Any, Callable
 
 from async_jobs.models import JobContext
 
-
-JobHandler = Callable[[JobContext, Dict[str, Any]], Any]
+JobHandler = Callable[[JobContext, dict[str, Any]], Any]
 
 
 class JobRegistry:
@@ -12,7 +12,7 @@ class JobRegistry:
 
     def __init__(self):
         """Initialize the registry."""
-        self._handlers: Dict[str, JobHandler] = {}
+        self._handlers: dict[str, JobHandler] = {}
 
     def handler(self, job_type: str):
         """Decorator to register a job handler."""

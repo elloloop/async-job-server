@@ -1,12 +1,13 @@
 """FastAPI router for job API."""
+
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from async_jobs.errors import AsyncJobsError, AuthTokenError, JobNotFoundError, QuotaExceededError
+from async_jobs.errors import AsyncJobsError, JobNotFoundError, QuotaExceededError
 from async_jobs.models import EnqueueJobRequest, JobStatus
 from async_jobs.service import JobService
 
@@ -18,11 +19,11 @@ class EnqueueRequest(BaseModel):
     use_case: str
     type: str
     queue: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     run_at: Optional[datetime] = None
     delay_tolerance_seconds: int = Field(ge=0)
     max_attempts: int = Field(ge=1)
-    backoff_policy: Dict[str, Any]
+    backoff_policy: dict[str, Any]
     dedupe_key: Optional[str] = None
     priority: int = Field(default=0)
 
@@ -42,16 +43,16 @@ class JobResponse(BaseModel):
     type: str
     queue: str
     status: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     run_at: datetime
     delay_tolerance_seconds: int
     deadline_at: datetime
     priority: int
     attempts: int
     max_attempts: int
-    backoff_policy: Dict[str, Any]
+    backoff_policy: dict[str, Any]
     lease_expires_at: Optional[datetime]
-    last_error: Optional[Dict[str, Any]]
+    last_error: Optional[dict[str, Any]]
     dedupe_key: Optional[str]
     enqueue_failed: bool
     created_at: datetime
@@ -61,7 +62,7 @@ class JobResponse(BaseModel):
 class ListJobsResponse(BaseModel):
     """Response with list of jobs."""
 
-    jobs: List[JobResponse]
+    jobs: list[JobResponse]
 
 
 def create_jobs_router(

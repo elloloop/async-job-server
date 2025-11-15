@@ -1,6 +1,7 @@
 """HTTP client for async jobs API."""
+
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 import httpx
@@ -22,10 +23,10 @@ class AsyncJobsHttpClient:
         use_case: str,
         type: str,
         queue: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         delay_tolerance_seconds: int,
         max_attempts: int,
-        backoff_policy: Dict[str, Any],
+        backoff_policy: dict[str, Any],
         run_at: Optional[datetime] = None,
         dedupe_key: Optional[str] = None,
         priority: int = 0,
@@ -67,7 +68,7 @@ class AsyncJobsHttpClient:
         except httpx.HTTPError as e:
             raise RemoteHttpError(f"HTTP error: {e}")
 
-    async def get_job(self, job_id: UUID) -> Dict[str, Any]:
+    async def get_job(self, job_id: UUID) -> dict[str, Any]:
         """Get a job by ID via HTTP."""
         headers = {}
         if self.auth_token:
@@ -91,7 +92,7 @@ class AsyncJobsHttpClient:
         use_case: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """List jobs via HTTP."""
         headers = {}
         if self.auth_token:
