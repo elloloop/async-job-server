@@ -100,7 +100,7 @@ async def lifespan(app: FastAPI):
         queue_name_prefix="asyncjobs",
         endpoint_url="http://localhost:4566",  # LocalStack endpoint
     )
-    await queue.initialize()
+    queue.initialize()
     logger.info("SQS queues initialized")
     
     # Initialize scheduler
@@ -236,13 +236,16 @@ async def create_job(request: CreateJobRequest):
     
     # Return job details
     job_data = job.to_dict()
+    created_at = job_data.get("created_at")
+    scheduled_at = job_data.get("scheduled_at")
+    
     return JobResponse(
         job_id=job_data["job_id"],
         job_type=job_data["job_type"],
         priority=job_data["priority"],
         status=job_data["status"],
-        created_at=job_data["created_at"].isoformat(),
-        scheduled_at=job_data.get("scheduled_at").isoformat() if job_data.get("scheduled_at") else None,
+        created_at=created_at.isoformat() if created_at else None,
+        scheduled_at=scheduled_at.isoformat() if scheduled_at else None,
     )
 
 
@@ -254,15 +257,20 @@ async def get_job(job_id: str):
     if not job_data:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     
+    created_at = job_data.get("created_at")
+    scheduled_at = job_data.get("scheduled_at")
+    started_at = job_data.get("started_at")
+    completed_at = job_data.get("completed_at")
+    
     return JobResponse(
         job_id=job_data["job_id"],
         job_type=job_data["job_type"],
         priority=job_data["priority"],
         status=job_data["status"],
-        created_at=job_data["created_at"].isoformat(),
-        scheduled_at=job_data.get("scheduled_at").isoformat() if job_data.get("scheduled_at") else None,
-        started_at=job_data.get("started_at").isoformat() if job_data.get("started_at") else None,
-        completed_at=job_data.get("completed_at").isoformat() if job_data.get("completed_at") else None,
+        created_at=created_at.isoformat() if created_at else None,
+        scheduled_at=scheduled_at.isoformat() if scheduled_at else None,
+        started_at=started_at.isoformat() if started_at else None,
+        completed_at=completed_at.isoformat() if completed_at else None,
         error_message=job_data.get("error_message"),
         result=job_data.get("result"),
     )

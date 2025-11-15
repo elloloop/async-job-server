@@ -71,12 +71,9 @@ class SQSQueue:
         """Get the queue name for a given priority."""
         return f"{self.queue_name_prefix}-{priority.value}"
 
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """
         Create SQS queues for each priority level if they don't exist.
-        
-        This method is not truly async but follows the pattern for consistency
-        with other storage/queue implementations.
         """
         for priority in JobPriority:
             queue_name = self._get_queue_name(priority)

@@ -70,7 +70,7 @@ async def main():
         queue_name_prefix="asyncjobs",
         endpoint_url="http://localhost:4566",
     )
-    await queue.initialize()
+    queue.initialize()
     logger.info("✓ SQS queues initialized")
     
     # Create scheduler
