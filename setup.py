@@ -34,7 +34,7 @@ setup(
     ],
     extras_require={
         "fastapi": [
-            "fastapi>=0.100.0",
+            "fastapi>=0.110.0",
             "uvicorn[standard]>=0.20.0",
         ],
         "dev": [
