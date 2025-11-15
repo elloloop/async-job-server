@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: asyncjobs
+      POSTGRES_USER: asyncjobs
+      POSTGRES_PASSWORD: asyncjobs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asyncjobs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      SERVICES: sqs
+      DEBUG: 1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  init-queues:
+    image: amazon/aws-cli:latest
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name notifications || true
+      aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name message-labeling || true
+      echo 'Queues created successfully'
+      "
+
+volumes:
+  postgres_data:
+  localstack_data:
