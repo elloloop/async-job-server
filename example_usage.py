@@ -159,9 +159,54 @@ async def query_jobs():
     await db_pool.close()
 
 
+# Example 6: Run scheduler programmatically
+async def run_scheduler_example():
+    """Example of running scheduler programmatically."""
+    from async_jobs import run_scheduler, AsyncJobsConfig
+
+    config = AsyncJobsConfig.from_env()
+    await run_scheduler(config=config)
+
+
+# Example 7: Run worker programmatically
+async def run_worker_example():
+    """Example of running worker programmatically."""
+    from async_jobs import run_worker, AsyncJobsConfig, job_registry
+
+    config = AsyncJobsConfig.from_env()
+    await run_worker(
+        queue_name="async-notifications",
+        config=config,
+        registry=job_registry,
+        handlers_module="myapp.jobs.handlers"
+    )
+
+
+# Example 8: Run scheduler and worker together
+async def run_scheduler_and_worker():
+    """Example of running scheduler and worker in the same process."""
+    from async_jobs import run_scheduler, run_worker, AsyncJobsConfig, job_registry
+
+    config = AsyncJobsConfig.from_env()
+
+    # Run both concurrently
+    await asyncio.gather(
+        run_scheduler(config=config),
+        run_worker(
+            queue_name="async-notifications",
+            config=config,
+            registry=job_registry,
+            handlers_module="myapp.jobs.handlers"
+        )
+    )
+
+
 if __name__ == "__main__":
     # Run examples (uncomment as needed)
     # asyncio.run(enqueue_jobs_directly())
     # asyncio.run(enqueue_jobs_via_http())
     # asyncio.run(query_jobs())
+    # asyncio.run(run_scheduler_example())
+    # asyncio.run(run_worker_example())
+    # asyncio.run(run_scheduler_and_worker())
     pass

@@ -1,10 +1,11 @@
-"""CLI entrypoint for scheduler."""
+"""CLI entrypoint and programmatic interface for scheduler."""
 
 import asyncio
 import logging
 import os
 import signal
 import sys
+from typing import Optional
 
 import asyncpg
 import boto3
@@ -25,6 +26,67 @@ def setup_logging():
 async def create_db_pool(config: AsyncJobsConfig):
     """Create database connection pool."""
     return await asyncpg.create_pool(config.db_dsn, min_size=2, max_size=10)
+
+
+async def run_scheduler(
+    config: Optional[AsyncJobsConfig] = None,
+    db_pool=None,
+    sqs_client=None,
+    logger: Optional[logging.Logger] = None,
+    shutdown_event: Optional[asyncio.Event] = None,
+    sleep_interval_seconds: float = 5.0,
+):
+    """
+    Run the scheduler programmatically.
+
+    This function can be imported and used in your own code to run the scheduler
+    with custom configuration or as part of a larger application.
+
+    Args:
+        config: AsyncJobsConfig instance. If None, will load from environment.
+        db_pool: Database connection pool. If None, will create from config.
+        sqs_client: Boto3 SQS client. If None, will create default client.
+        logger: Logger instance. If None, will create default logger.
+        shutdown_event: Optional asyncio.Event for graceful shutdown.
+        sleep_interval_seconds: Sleep interval between scheduler iterations.
+
+    Example:
+        ```python
+        from async_jobs import run_scheduler, AsyncJobsConfig
+        import asyncio
+
+        config = AsyncJobsConfig.from_env()
+        asyncio.run(run_scheduler(config=config))
+        ```
+    """
+    if config is None:
+        config = AsyncJobsConfig.from_env()
+
+    if logger is None:
+        logger = logging.getLogger(__name__)
+
+    if sqs_client is None:
+        sqs_client = boto3.client("sqs")
+
+    if shutdown_event is None:
+        shutdown_event = asyncio.Event()
+
+    db_pool_provided = db_pool is not None
+    if db_pool is None:
+        db_pool = await create_db_pool(config)
+
+    try:
+        await run_scheduler_loop(
+            config=config,
+            db_pool=db_pool,
+            sqs_client=sqs_client,
+            logger=logger,
+            shutdown_event=shutdown_event,
+            sleep_interval_seconds=sleep_interval_seconds,
+        )
+    finally:
+        if not db_pool_provided and db_pool:
+            await db_pool.close()
 
 
 def main():
@@ -53,15 +115,10 @@ def main():
 
     async def run():
         """Async main function."""
-        db_pool = None
         try:
-            logger.info("Creating database connection pool...")
-            db_pool = await create_db_pool(config)
-
-            logger.info("Starting scheduler loop...")
-            await run_scheduler_loop(
+            logger.info("Starting scheduler...")
+            await run_scheduler(
                 config=config,
-                db_pool=db_pool,
                 sqs_client=sqs_client,
                 logger=logger,
                 shutdown_event=shutdown_event,
@@ -69,10 +126,6 @@ def main():
         except Exception as e:
             logger.error(f"Fatal error in scheduler: {e}", exc_info=True)
             sys.exit(1)
-        finally:
-            if db_pool:
-                logger.info("Closing database connection pool...")
-                await db_pool.close()
 
     try:
         asyncio.run(run())

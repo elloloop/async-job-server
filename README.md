@@ -154,11 +154,44 @@ curl -X POST https://async-jobs.internal/async-jobs/jobs/enqueue \
 
 ### 6. Run Scheduler
 
+**As CLI command:**
+
 ```bash
 async-jobs-scheduler
 ```
 
-Or as Docker container:
+**Programmatically:**
+
+```python
+from async_jobs import run_scheduler, AsyncJobsConfig
+import asyncio
+
+config = AsyncJobsConfig.from_env()
+asyncio.run(run_scheduler(config=config))
+```
+
+**With custom configuration:**
+
+```python
+from async_jobs import run_scheduler, AsyncJobsConfig
+import asyncpg
+import boto3
+import asyncio
+
+config = AsyncJobsConfig.from_env()
+db_pool = await asyncpg.create_pool(config.db_dsn)
+sqs_client = boto3.client("sqs")
+
+# Run with custom resources
+asyncio.run(run_scheduler(
+    config=config,
+    db_pool=db_pool,
+    sqs_client=sqs_client,
+    sleep_interval_seconds=10.0
+))
+```
+
+**As Docker container:**
 
 ```dockerfile
 FROM python:3.11-slim
@@ -170,12 +203,57 @@ CMD ["async-jobs-scheduler"]
 
 ### 7. Run Worker
 
+**As CLI command:**
+
 ```bash
 export ASYNC_JOBS_HANDLERS_MODULE="myapp.jobs.handlers"
 async-jobs-worker --queue async-notifications
 ```
 
-Or as Docker container:
+**Programmatically:**
+
+```python
+from async_jobs import run_worker, AsyncJobsConfig, job_registry
+import asyncio
+
+config = AsyncJobsConfig.from_env()
+asyncio.run(run_worker(
+    queue_name="async-notifications",
+    config=config,
+    registry=job_registry,
+    handlers_module="myapp.jobs.handlers"
+))
+```
+
+**With custom configuration:**
+
+```python
+from async_jobs import run_worker, AsyncJobsConfig, JobRegistry, job_registry
+import asyncpg
+import boto3
+import asyncio
+
+config = AsyncJobsConfig.from_env()
+db_pool = await asyncpg.create_pool(config.db_dsn)
+sqs_client = boto3.client("sqs")
+
+# Use custom registry or the global one
+custom_registry = JobRegistry()
+# Register handlers...
+custom_registry.handler("my_job")(my_handler)
+
+asyncio.run(run_worker(
+    queue_name="async-notifications",
+    config=config,
+    db_pool=db_pool,
+    sqs_client=sqs_client,
+    registry=custom_registry,
+    max_messages=20,
+    wait_time_seconds=30
+))
+```
+
+**As Docker container:**
 
 ```dockerfile
 FROM python:3.11-slim
@@ -184,6 +262,28 @@ COPY . /app
 RUN pip install .
 ENV ASYNC_JOBS_HANDLERS_MODULE="myapp.jobs.handlers"
 CMD ["async-jobs-worker", "--queue", "async-notifications"]
+```
+
+**Running scheduler and worker in the same process:**
+
+```python
+from async_jobs import run_scheduler, run_worker, AsyncJobsConfig, job_registry
+import asyncio
+
+config = AsyncJobsConfig.from_env()
+
+async def run_both():
+    # Run scheduler and worker concurrently
+    await asyncio.gather(
+        run_scheduler(config=config),
+        run_worker(
+            queue_name="async-notifications",
+            config=config,
+            registry=job_registry
+        )
+    )
+
+asyncio.run(run_both())
 ```
 
 ## API Reference

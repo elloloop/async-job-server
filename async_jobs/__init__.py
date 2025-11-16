@@ -19,6 +19,10 @@ from async_jobs.registry import JobRegistry, job_registry
 from async_jobs.service import JobService
 from async_jobs.fastapi_router import create_jobs_router
 from async_jobs.http_client import AsyncJobsHttpClient
+from async_jobs.scheduler import run_scheduler_loop
+from async_jobs.worker import run_worker_loop
+from async_jobs.scheduler_main import run_scheduler
+from async_jobs.worker_main import run_worker
 
 __all__ = [
     "AsyncJobsConfig",
@@ -34,4 +38,8 @@ __all__ = [
     "AsyncJobsHttpClient",
     "create_jobs_router",
     "job_registry",
+    "run_scheduler_loop",
+    "run_worker_loop",
+    "run_scheduler",
+    "run_worker",
 ]
