@@ -1,0 +1,60 @@
+[tool.poetry]
+name = "async-jobs"
+version = "0.1.0"
+description = "Reusable async job platform library for FastAPI projects"
+authors = ["Elloloop Engineering"]
+readme = "README.md"
+packages = [{include = "async_jobs"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.0"
+uvicorn = "^0.24.0"
+asyncpg = "^0.29.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+httpx = "^0.25.0"
+boto3 = "^1.34.0"
+aioboto3 = "^12.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+black = "^23.11.0"
+ruff = "^0.1.6"
+mypy = "^1.7.0"
+httpx = "^0.25.0"
+testcontainers = "^3.7.0"
+docker = "^6.1.0"
+
+[tool.poetry.scripts]
+async-jobs-scheduler = "async_jobs.scheduler_main:main"
+async-jobs-worker = "async_jobs.worker_main:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
