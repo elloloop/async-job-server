@@ -28,10 +28,6 @@ httpx = "^0.25.0"
 testcontainers = "^3.7.0"
 docker = "^6.1.0"
 
-[tool.poetry.scripts]
-async-jobs-scheduler = "async_jobs.scheduler_main:main"
-async-jobs-worker = "async_jobs.worker_main:main"
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

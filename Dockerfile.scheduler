@@ -13,10 +13,11 @@ RUN pip install --no-cache-dir poetry==1.7.0
 # Copy project files
 COPY pyproject.toml poetry.lock ./
 COPY async_jobs ./async_jobs
+COPY examples/run_scheduler.py ./
 
 # Install dependencies
 RUN poetry config virtualenvs.create false && \
     poetry install --no-dev --no-interaction --no-ansi
 
 # Default command (can be overridden)
-CMD ["async-jobs-scheduler"]
+CMD ["python", "run_scheduler.py"]

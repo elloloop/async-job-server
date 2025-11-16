@@ -13,11 +13,12 @@ RUN pip install --no-cache-dir poetry==1.7.0
 # Copy project files
 COPY pyproject.toml poetry.lock ./
 COPY async_jobs ./async_jobs
+COPY examples/run_worker.py ./
 
 # Install dependencies
 RUN poetry config virtualenvs.create false && \
     poetry install --no-dev --no-interaction --no-ansi
 
 # Default command (can be overridden)
-ENTRYPOINT ["async-jobs-worker"]
+ENTRYPOINT ["python", "run_worker.py"]
 CMD ["--queue", "https://sqs.us-east-1.amazonaws.com/queue-url"]

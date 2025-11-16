@@ -6,6 +6,8 @@ This directory contains example applications demonstrating how to use the async_
 
 - `example_app.py`: Complete FastAPI application with async_jobs integration
 - `http_client_example.py`: Example of using the HTTP client to enqueue jobs remotely
+- `run_scheduler.py`: Example script for running the scheduler
+- `run_worker.py`: Example script for running a worker
 - `.env.example`: Example environment variables
 
 ## Setup
@@ -36,10 +38,10 @@ poetry run python examples/example_app.py
 
 ```bash
 # Terminal 2: Run scheduler
-poetry run async-jobs-scheduler
+poetry run python examples/run_scheduler.py
 
 # Terminal 3: Run worker
-poetry run async-jobs-worker \
+poetry run python examples/run_worker.py \
   --queue https://sqs.us-east-1.amazonaws.com/123/notifications \
   --handlers-module examples.example_app
 ```
@@ -84,3 +86,14 @@ This will start:
 - Localstack (SQS emulator)
 - Scheduler
 - Workers for both notification and message labeling queues
+
+## Creating Your Own Scheduler/Worker Scripts
+
+The library provides `run_scheduler_loop` and `run_worker_loop` functions that you can use to create your own scheduler and worker scripts. See `run_scheduler.py` and `run_worker.py` for examples.
+
+You can customize these scripts to:
+- Add custom logging or monitoring
+- Integrate with your application's lifecycle management
+- Add additional initialization or cleanup logic
+- Use different configuration sources
+

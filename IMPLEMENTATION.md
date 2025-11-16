@@ -242,13 +242,12 @@ async def send_email(ctx, payload):
     pass
 ```
 
-### 5. Deployment
-```bash
-# Scheduler
-async-jobs-scheduler
+### 5. Scheduler and Worker
+```python
+# Import and use directly in your application
+from async_jobs import run_scheduler_loop, run_worker_loop
 
-# Worker
-async-jobs-worker --queue <url> --handlers-module myapp.handlers
+# See examples/run_scheduler.py and examples/run_worker.py for complete examples
 ```
 
 ## Project Structure
@@ -267,13 +266,16 @@ async-job-server/
 │   ├── http_client.py    # Remote client
 │   ├── scheduler.py      # Scheduler logic
 │   ├── worker.py         # Worker logic
-│   ├── scheduler_main.py # Scheduler CLI
-│   ├── worker_main.py    # Worker CLI
+│   ├── scheduler_main.py # Reference scheduler implementation
+│   ├── worker_main.py    # Reference worker implementation
 │   └── handlers/         # Sample handlers
 ├── tests/
 │   ├── unit/             # Unit tests (33 tests)
 │   └── integration/      # Integration tests (7 tests)
 ├── examples/             # Example applications
+│   ├── run_scheduler.py  # Example scheduler script
+│   ├── run_worker.py     # Example worker script
+│   └── ...
 ├── Dockerfile.scheduler  # Scheduler container
 ├── Dockerfile.worker     # Worker container
 ├── docker-compose.yml    # Full stack setup
@@ -303,11 +305,9 @@ async-job-server/
 - testcontainers ^3.7.0
 - docker ^6.1.0
 
-## CLI Commands
+## Usage
 
-Installed as poetry scripts:
-- `async-jobs-scheduler` - Run scheduler process
-- `async-jobs-worker` - Run worker process
+The library provides `run_scheduler_loop` and `run_worker_loop` functions that can be imported and used directly in your application. Example scripts are provided in the `examples/` directory showing how to create scheduler and worker processes.
 
 ## Environment Variables
 
