@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "async-jobs"
+version = "0.1.0"
+description = "Reusable async job platform library for FastAPI, PostgreSQL, and SQS"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Internal Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "fastapi>=0.104.0",
+    "pydantic>=2.0.0",
+    "asyncpg>=0.29.0",
+    "boto3>=1.28.0",
+    "aiohttp>=3.9.0",
+    "uvloop>=0.19.0; sys_platform != 'win32'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.25.0",
+    "testcontainers>=4.0.0",
+    "testcontainers[postgres]>=4.0.0",
+    "localstack>=3.0.0",
+    "moto>=5.0.0",
+]
+
+[project.scripts]
+async-jobs-scheduler = "async_jobs.scheduler_main:main"
+async-jobs-worker = "async_jobs.worker_main:main"
+
+[tool.setuptools]
+packages = ["async_jobs", "async_jobs.handlers"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["async_jobs"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
