@@ -1,13 +1,14 @@
 """FastAPI router for async jobs HTTP API."""
 
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from async_jobs.errors import AuthTokenError, JobNotFoundError, QuotaExceededError
+from async_jobs.errors import JobNotFoundError, QuotaExceededError
 from async_jobs.service import JobService
 
 
@@ -18,15 +19,11 @@ class EnqueueJobRequest(BaseModel):
     use_case: str = Field(..., description="Use case name")
     type: str = Field(..., description="Job type")
     queue: str = Field(..., description="SQS queue name")
-    payload: Dict[str, Any] = Field(..., description="Job payload")
+    payload: dict[str, Any] = Field(..., description="Job payload")
     run_at: Optional[str] = Field(None, description="ISO8601 timestamp for when to run")
-    delay_tolerance_seconds: Optional[int] = Field(
-        None, description="Delay tolerance in seconds"
-    )
+    delay_tolerance_seconds: Optional[int] = Field(None, description="Delay tolerance in seconds")
     max_attempts: int = Field(5, description="Maximum retry attempts")
-    backoff_policy: Optional[Dict[str, Any]] = Field(
-        None, description="Retry backoff policy"
-    )
+    backoff_policy: Optional[dict[str, Any]] = Field(None, description="Retry backoff policy")
     dedupe_key: Optional[str] = Field(None, description="Deduplication key")
     priority: int = Field(0, description="Job priority")
 
@@ -46,16 +43,16 @@ class JobResponse(BaseModel):
     type: str
     queue: str
     status: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     run_at: str
     delay_tolerance: float
     deadline_at: str
     priority: int
     attempts: int
     max_attempts: int
-    backoff_policy: Dict[str, Any]
+    backoff_policy: dict[str, Any]
     lease_expires_at: Optional[str]
-    last_error: Optional[Dict[str, Any]]
+    last_error: Optional[dict[str, Any]]
     dedupe_key: Optional[str]
     enqueue_failed: bool
     created_at: str
@@ -65,7 +62,7 @@ class JobResponse(BaseModel):
 class ListJobsResponse(BaseModel):
     """Response model for listing jobs."""
 
-    jobs: List[JobResponse]
+    jobs: list[JobResponse]
 
 
 def create_jobs_router(

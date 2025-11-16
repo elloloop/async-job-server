@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class AsyncJobsConfig:
@@ -18,8 +18,8 @@ class AsyncJobsConfig:
         message_labeling_max_concurrent: int,
         message_labeling_default_delay_tolerance_seconds: int,
         enqueue_auth_token: Optional[str] = None,
-        per_use_case_config: Optional[Dict[str, Any]] = None,
-        per_tenant_quotas: Optional[Dict[str, Dict[str, int]]] = None,
+        per_use_case_config: Optional[dict[str, Any]] = None,
+        per_tenant_quotas: Optional[dict[str, dict[str, int]]] = None,
     ):
         self.db_dsn = db_dsn
         self.sqs_queue_notifications = sqs_queue_notifications
@@ -100,7 +100,7 @@ class AsyncJobsConfig:
             per_tenant_quotas=per_tenant_quotas,
         )
 
-    def get_use_case_config(self, use_case: str) -> Optional[Dict[str, Any]]:
+    def get_use_case_config(self, use_case: str) -> Optional[dict[str, Any]]:
         """Get configuration for a specific use case."""
         return self.per_use_case_config.get(use_case)
 

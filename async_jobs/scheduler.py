@@ -3,8 +3,8 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict
+from datetime import timedelta
+from typing import Any
 
 import asyncpg
 
@@ -62,9 +62,7 @@ async def run_scheduler_loop(
                             )
                             logger.debug(f"Sent job {job.id} to SQS queue {queue_url}")
                         except Exception as e:
-                            logger.error(
-                                f"Failed to send job {job.id} to SQS: {str(e)}"
-                            )
+                            logger.error(f"Failed to send job {job.id} to SQS: {str(e)}")
                             # Job will be rescheduled when lease expires
 
         except Exception as e:

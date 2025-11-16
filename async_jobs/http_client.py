@@ -1,6 +1,6 @@
 """HTTP client for async jobs service."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 import httpx
@@ -36,11 +36,11 @@ class AsyncJobsHttpClient:
         use_case: str,
         type: str,
         queue: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         run_at: Optional[str] = None,
         delay_tolerance_seconds: Optional[int] = None,
         max_attempts: int = 5,
-        backoff_policy: Optional[Dict[str, Any]] = None,
+        backoff_policy: Optional[dict[str, Any]] = None,
         dedupe_key: Optional[str] = None,
         priority: int = 0,
     ) -> UUID:
@@ -101,15 +101,13 @@ class AsyncJobsHttpClient:
                 data = response.json()
                 return UUID(data["job_id"])
         except httpx.HTTPStatusError as e:
-            raise RemoteHttpError(
-                f"HTTP {e.response.status_code}: {e.response.text}"
-            ) from e
+            raise RemoteHttpError(f"HTTP {e.response.status_code}: {e.response.text}") from e
         except httpx.RequestError as e:
             raise RemoteHttpError(f"Request failed: {str(e)}") from e
         except (KeyError, ValueError) as e:
             raise RemoteHttpError(f"Invalid response format: {str(e)}") from e
 
-    async def get_job(self, job_id: UUID) -> Dict[str, Any]:
+    async def get_job(self, job_id: UUID) -> dict[str, Any]:
         """
         Get job information by ID.
 
@@ -134,8 +132,6 @@ class AsyncJobsHttpClient:
                 response.raise_for_status()
                 return response.json()
         except httpx.HTTPStatusError as e:
-            raise RemoteHttpError(
-                f"HTTP {e.response.status_code}: {e.response.text}"
-            ) from e
+            raise RemoteHttpError(f"HTTP {e.response.status_code}: {e.response.text}") from e
         except httpx.RequestError as e:
             raise RemoteHttpError(f"Request failed: {str(e)}") from e

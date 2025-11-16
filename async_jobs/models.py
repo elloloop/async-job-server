@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 
@@ -27,16 +27,16 @@ class Job:
         type: str,
         queue: str,
         status: JobStatus,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         run_at: datetime,
         delay_tolerance: timedelta,
         deadline_at: datetime,
         priority: int,
         attempts: int,
         max_attempts: int,
-        backoff_policy: Dict[str, Any],
+        backoff_policy: dict[str, Any],
         lease_expires_at: Optional[datetime] = None,
-        last_error: Optional[Dict[str, Any]] = None,
+        last_error: Optional[dict[str, Any]] = None,
         dedupe_key: Optional[str] = None,
         enqueue_failed: bool = False,
         created_at: Optional[datetime] = None,
@@ -63,7 +63,7 @@ class Job:
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert job to dictionary representation."""
         return {
             "id": str(self.id),

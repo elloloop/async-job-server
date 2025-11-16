@@ -11,7 +11,6 @@ import asyncpg
 from async_jobs.config import AsyncJobsConfig
 from async_jobs.scheduler import run_scheduler_loop
 
-
 # Global flag for graceful shutdown
 shutdown_requested = False
 

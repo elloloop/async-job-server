@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -17,7 +17,10 @@ class JobService:
     """High-level API for job operations."""
 
     def __init__(
-        self, config: AsyncJobsConfig, db_pool: asyncpg.Pool, logger: Optional[logging.Logger] = None
+        self,
+        config: AsyncJobsConfig,
+        db_pool: asyncpg.Pool,
+        logger: Optional[logging.Logger] = None,
     ):
         self.config = config
         self.store = JobStore(db_pool)
@@ -30,11 +33,11 @@ class JobService:
         use_case: str,
         type: str,
         queue: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         run_at: Optional[datetime] = None,
         delay_tolerance: Optional[timedelta] = None,
         max_attempts: int = 5,
-        backoff_policy: Optional[Dict[str, Any]] = None,
+        backoff_policy: Optional[dict[str, Any]] = None,
         dedupe_key: Optional[str] = None,
         priority: int = 0,
     ) -> UUID:
@@ -114,7 +117,7 @@ class JobService:
         use_case: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 50,
-    ) -> List[Job]:
+    ) -> list[Job]:
         """List jobs with optional filters."""
         return await self.store.list_jobs(
             tenant_id=tenant_id, use_case=use_case, status=status, limit=limit
@@ -122,7 +125,7 @@ class JobService:
 
     async def lease_jobs_for_use_case(
         self, use_case: str, max_count: int, lease_duration: timedelta
-    ) -> List[Job]:
+    ) -> list[Job]:
         """
         Lease jobs for a use case.
 
@@ -164,14 +167,14 @@ class JobService:
         self.logger.info(f"Job {job_id} succeeded")
 
     async def mark_job_retry(
-        self, job_id: UUID, error: Dict[str, Any], backoff_seconds: int
+        self, job_id: UUID, error: dict[str, Any], backoff_seconds: int
     ) -> None:
         """Mark a job for retry with backoff."""
         next_run_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
         await self.store.update_job_retry(job_id, error, next_run_at)
         self.logger.info(f"Job {job_id} scheduled for retry at {next_run_at}")
 
-    async def mark_job_dead(self, job_id: UUID, error: Dict[str, Any]) -> None:
+    async def mark_job_dead(self, job_id: UUID, error: dict[str, Any]) -> None:
         """Mark a job as permanently failed."""
         await self.store.update_job_dead(job_id, error)
         self.logger.error(f"Job {job_id} marked as dead")

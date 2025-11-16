@@ -16,16 +16,16 @@ async def send_notification(ctx, payload):
     job = ctx["job"]
 
     logger.info(f"Sending notification for job {job.id}")
-    
+
     # Extract payload fields
     email = payload.get("email")
     template = payload.get("template")
-    
+
     logger.info(f"Notification: email={email}, template={template}")
-    
+
     # Simulate sending notification
     # In real implementation, this would call email service, push notification service, etc.
-    
+
     logger.info(f"Notification sent successfully for job {job.id}")
 
 
@@ -42,14 +42,14 @@ async def label_message(ctx, payload):
     job = ctx["job"]
 
     logger.info(f"Labeling message for job {job.id}")
-    
+
     # Extract payload fields
     message_id = payload.get("message_id")
     labels = payload.get("labels", [])
-    
+
     logger.info(f"Message labeling: message_id={message_id}, labels={labels}")
-    
+
     # Simulate labeling
     # In real implementation, this would call ML service, database update, etc.
-    
+
     logger.info(f"Message labeled successfully for job {job.id}")

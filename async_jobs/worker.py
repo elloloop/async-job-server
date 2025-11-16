@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -64,7 +64,7 @@ async def run_worker_loop(
             # Process each message
             for message in messages:
                 receipt_handle = message["ReceiptHandle"]
-                
+
                 try:
                     # Parse message body
                     body = json.loads(message["Body"])
@@ -107,7 +107,7 @@ async def run_worker_loop(
 
                     # Execute handler
                     logger.info(f"Executing job {job_id} (type={job.type})")
-                    
+
                     try:
                         # Create context for handler
                         ctx = {"job": job, "logger": logger}
@@ -115,12 +115,12 @@ async def run_worker_loop(
 
                         # Mark as succeeded
                         await job_service.mark_job_succeeded(job.id)
-                        
+
                         # Delete message
                         await sqs_client.delete_message(
                             QueueUrl=queue_url, ReceiptHandle=receipt_handle
                         )
-                        
+
                         logger.info(f"Job {job_id} completed successfully")
 
                     except Exception as e:
@@ -138,9 +138,9 @@ async def run_worker_loop(
                             backoff_seconds = _calculate_backoff(
                                 job.backoff_policy, job.attempts + 1
                             )
-                            
+
                             await job_service.mark_job_retry(job.id, error, backoff_seconds)
-                            
+
                             logger.info(
                                 f"Job {job_id} will retry (attempt {job.attempts + 1}/"
                                 f"{job.max_attempts}) after {backoff_seconds}s"
@@ -166,7 +166,7 @@ async def run_worker_loop(
             await asyncio.sleep(5)  # Brief pause before retrying
 
 
-def _calculate_backoff(backoff_policy: Dict[str, Any], attempt: int) -> int:
+def _calculate_backoff(backoff_policy: dict[str, Any], attempt: int) -> int:
     """
     Calculate backoff delay based on policy and attempt number.
 

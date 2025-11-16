@@ -14,7 +14,6 @@ from async_jobs.config import AsyncJobsConfig
 from async_jobs.registry import job_registry
 from async_jobs.worker import run_worker_loop
 
-
 # Global flag for graceful shutdown
 shutdown_requested = False
 
@@ -47,9 +46,7 @@ async def async_main(queue_url: str, handlers_module: str):
             logger.info(f"Importing handlers module: {handlers_module}")
             try:
                 importlib.import_module(handlers_module)
-                logger.info(
-                    f"Registered handlers: {list(job_registry.all_handlers().keys())}"
-                )
+                logger.info(f"Registered handlers: {list(job_registry.all_handlers().keys())}")
             except ImportError as e:
                 logger.error(f"Failed to import handlers module: {str(e)}")
                 sys.exit(1)
@@ -68,9 +65,7 @@ async def async_main(queue_url: str, handlers_module: str):
         async with session.client("sqs") as sqs_client:
             # Run worker loop
             try:
-                await run_worker_loop(
-                    config, db_pool, sqs_client, job_registry, queue_url, logger
-                )
+                await run_worker_loop(config, db_pool, sqs_client, job_registry, queue_url, logger)
             except asyncio.CancelledError:
                 logger.info("Worker loop cancelled")
             finally:

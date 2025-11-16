@@ -1,13 +1,14 @@
 """Job handler registry."""
 
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Optional
 
 
 class JobRegistry:
     """Registry for job handlers."""
 
     def __init__(self):
-        self._handlers: Dict[str, Callable] = {}
+        self._handlers: dict[str, Callable] = {}
 
     def handler(self, name: str):
         """
@@ -29,7 +30,7 @@ class JobRegistry:
         """Get a handler by name."""
         return self._handlers.get(name)
 
-    def all_handlers(self) -> Dict[str, Callable]:
+    def all_handlers(self) -> dict[str, Callable]:
         """Get all registered handlers."""
         return self._handlers.copy()
 

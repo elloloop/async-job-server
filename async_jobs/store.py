@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 import asyncpg
@@ -24,12 +24,12 @@ class JobStore:
         use_case: str,
         type: str,
         queue: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         run_at: datetime,
         delay_tolerance: timedelta,
         deadline_at: datetime,
         max_attempts: int,
-        backoff_policy: Dict[str, Any],
+        backoff_policy: dict[str, Any],
         priority: int = 0,
         dedupe_key: Optional[str] = None,
     ) -> Job:
@@ -78,7 +78,7 @@ class JobStore:
         use_case: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 50,
-    ) -> List[Job]:
+    ) -> list[Job]:
         """List jobs with optional filters."""
         query = "SELECT * FROM jobs WHERE 1=1"
         params = []
@@ -136,7 +136,7 @@ class JobStore:
 
     async def select_pending_jobs_for_scheduling(
         self, use_case: str, limit: int, now: datetime
-    ) -> List[Job]:
+    ) -> list[Job]:
         """Select pending jobs for scheduling, ordered by deadline."""
         async with self.db_pool.acquire() as conn:
             rows = await conn.fetch(
@@ -157,7 +157,7 @@ class JobStore:
         return [self._row_to_job(row) for row in rows]
 
     async def mark_jobs_as_running_and_lease(
-        self, job_ids: List[UUID], lease_expires_at: datetime
+        self, job_ids: list[UUID], lease_expires_at: datetime
     ) -> None:
         """Mark jobs as running and set lease expiration."""
         async with self.db_pool.acquire() as conn:
@@ -186,7 +186,7 @@ class JobStore:
             )
 
     async def update_job_retry(
-        self, job_id: UUID, error: Dict[str, Any], next_run_at: datetime
+        self, job_id: UUID, error: dict[str, Any], next_run_at: datetime
     ) -> None:
         """Update job for retry with incremented attempts."""
         async with self.db_pool.acquire() as conn:
@@ -207,7 +207,7 @@ class JobStore:
                 job_id,
             )
 
-    async def update_job_dead(self, job_id: UUID, error: Dict[str, Any]) -> None:
+    async def update_job_dead(self, job_id: UUID, error: dict[str, Any]) -> None:
         """Mark a job as dead (permanent failure)."""
         async with self.db_pool.acquire() as conn:
             await conn.execute(
@@ -233,16 +233,22 @@ class JobStore:
             type=row["type"],
             queue=row["queue"],
             status=JobStatus(row["status"]),
-            payload=json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"],
+            payload=json.loads(row["payload"])
+            if isinstance(row["payload"], str)
+            else row["payload"],
             run_at=row["run_at"],
             delay_tolerance=row["delay_tolerance"],
             deadline_at=row["deadline_at"],
             priority=row["priority"],
             attempts=row["attempts"],
             max_attempts=row["max_attempts"],
-            backoff_policy=json.loads(row["backoff_policy"]) if isinstance(row["backoff_policy"], str) else row["backoff_policy"],
+            backoff_policy=json.loads(row["backoff_policy"])
+            if isinstance(row["backoff_policy"], str)
+            else row["backoff_policy"],
             lease_expires_at=row["lease_expires_at"],
-            last_error=json.loads(row["last_error"]) if row["last_error"] and isinstance(row["last_error"], str) else row["last_error"],
+            last_error=json.loads(row["last_error"])
+            if row["last_error"] and isinstance(row["last_error"], str)
+            else row["last_error"],
             dedupe_key=row["dedupe_key"],
             enqueue_failed=row["enqueue_failed"],
             created_at=row["created_at"],
