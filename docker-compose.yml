@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: asyncjobs
+      POSTGRES_USER: asyncjobs
+      POSTGRES_PASSWORD: asyncjobs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asyncjobs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - localstack_data:/tmp/localstack
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    environment:
+      - ASYNC_JOBS_DB_DSN=postgresql://asyncjobs:asyncjobs@postgres/asyncjobs
+      - ASYNC_JOBS_SQS_QUEUE_NOTIFICATIONS=http://localstack:4566/000000000000/notifications
+      - ASYNC_JOBS_SQS_QUEUE_MESSAGE_LABELING=http://localstack:4566/000000000000/message-labeling
+      - ASYNC_JOBS_NOTIFICATIONS_MAX_CONCURRENT=10
+      - ASYNC_JOBS_NOTIFICATIONS_DEFAULT_DELAY_TOLERANCE_SECONDS=300
+      - ASYNC_JOBS_MESSAGE_LABELING_MAX_CONCURRENT=5
+      - ASYNC_JOBS_MESSAGE_LABELING_DEFAULT_DELAY_TOLERANCE_SECONDS=600
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+
+  worker-notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command:
+      - "--queue"
+      - "http://localstack:4566/000000000000/notifications"
+      - "--handlers-module"
+      - "async_jobs.handlers"
+    environment:
+      - ASYNC_JOBS_DB_DSN=postgresql://asyncjobs:asyncjobs@postgres/asyncjobs
+      - ASYNC_JOBS_SQS_QUEUE_NOTIFICATIONS=http://localstack:4566/000000000000/notifications
+      - ASYNC_JOBS_SQS_QUEUE_MESSAGE_LABELING=http://localstack:4566/000000000000/message-labeling
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+
+  worker-message-labeling:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command:
+      - "--queue"
+      - "http://localstack:4566/000000000000/message-labeling"
+      - "--handlers-module"
+      - "async_jobs.handlers"
+    environment:
+      - ASYNC_JOBS_DB_DSN=postgresql://asyncjobs:asyncjobs@postgres/asyncjobs
+      - ASYNC_JOBS_SQS_QUEUE_NOTIFICATIONS=http://localstack:4566/000000000000/notifications
+      - ASYNC_JOBS_SQS_QUEUE_MESSAGE_LABELING=http://localstack:4566/000000000000/message-labeling
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  localstack_data:
