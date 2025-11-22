@@ -134,10 +134,49 @@ class JobStore:
             )
         return count
 
+    async def lease_pending_jobs_atomically(
+        self, use_case: str, limit: int, now: datetime, lease_expires_at: datetime
+    ) -> list[Job]:
+        """
+        Atomically lease pending jobs for scheduling.
+        
+        Uses FOR UPDATE SKIP LOCKED to ensure only one scheduler can lease each job.
+        Returns jobs that were successfully leased.
+        """
+        async with self.db_pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                UPDATE jobs
+                SET status = $1, lease_expires_at = $2, updated_at = now()
+                WHERE id IN (
+                    SELECT id FROM jobs
+                    WHERE use_case = $3
+                      AND status = $4
+                      AND run_at <= $5
+                    ORDER BY deadline_at ASC
+                    LIMIT $6
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING *
+                """,
+                JobStatus.running.value,
+                lease_expires_at,
+                use_case,
+                JobStatus.pending.value,
+                now,
+                limit,
+            )
+
+        return [self._row_to_job(row) for row in rows]
+
     async def select_pending_jobs_for_scheduling(
         self, use_case: str, limit: int, now: datetime
     ) -> list[Job]:
-        """Select pending jobs for scheduling, ordered by deadline."""
+        """
+        DEPRECATED: Use lease_pending_jobs_atomically instead.
+        
+        Select pending jobs for scheduling, ordered by deadline.
+        """
         async with self.db_pool.acquire() as conn:
             rows = await conn.fetch(
                 """
@@ -159,7 +198,11 @@ class JobStore:
     async def mark_jobs_as_running_and_lease(
         self, job_ids: list[UUID], lease_expires_at: datetime
     ) -> None:
-        """Mark jobs as running and set lease expiration."""
+        """
+        DEPRECATED: Use lease_pending_jobs_atomically instead.
+        
+        Mark jobs as running and set lease expiration.
+        """
         async with self.db_pool.acquire() as conn:
             await conn.execute(
                 """
@@ -220,6 +263,80 @@ class JobStore:
                 WHERE id = $3
                 """,
                 JobStatus.dead.value,
+                json.dumps(error),
+                job_id,
+            )
+
+    async def revert_expired_leases(self, now: datetime, max_attempts: int = 5) -> int:
+        """
+        Revert jobs with expired leases back to pending or mark as dead.
+        
+        Returns the number of jobs reverted.
+        """
+        async with self.db_pool.acquire() as conn:
+            # Revert to pending if attempts < max_attempts
+            result = await conn.execute(
+                """
+                UPDATE jobs
+                SET status = $1,
+                    lease_expires_at = NULL,
+                    last_error = jsonb_build_object(
+                        'error', 'Lease expired - worker may have crashed',
+                        'timestamp', $3
+                    ),
+                    updated_at = now()
+                WHERE status = $2
+                  AND lease_expires_at < $4
+                  AND attempts < max_attempts
+                """,
+                JobStatus.pending.value,
+                JobStatus.running.value,
+                now.isoformat(),
+                now,
+            )
+            
+            # Extract count from result string like "UPDATE 5"
+            reverted_count = int(result.split()[-1]) if result else 0
+            
+            # Mark as dead if attempts >= max_attempts
+            dead_result = await conn.execute(
+                """
+                UPDATE jobs
+                SET status = $1,
+                    lease_expires_at = NULL,
+                    last_error = jsonb_build_object(
+                        'error', 'Lease expired after max attempts',
+                        'timestamp', $3
+                    ),
+                    updated_at = now()
+                WHERE status = $2
+                  AND lease_expires_at < $4
+                  AND attempts >= max_attempts
+                """,
+                JobStatus.dead.value,
+                JobStatus.running.value,
+                now.isoformat(),
+                now,
+            )
+            
+            dead_count = int(dead_result.split()[-1]) if dead_result else 0
+            
+            return reverted_count + dead_count
+
+    async def mark_job_enqueue_failed(self, job_id: UUID, error: dict[str, Any]) -> None:
+        """Mark a job as having failed to enqueue to SQS."""
+        async with self.db_pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE jobs
+                SET enqueue_failed = true,
+                    status = $1,
+                    lease_expires_at = NULL,
+                    last_error = $2,
+                    updated_at = now()
+                WHERE id = $3
+                """,
+                JobStatus.pending.value,
                 json.dumps(error),
                 job_id,
             )

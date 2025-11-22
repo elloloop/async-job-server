@@ -1,6 +1,7 @@
 """High-level service layer for job operations."""
 
 import logging
+import random
 from datetime import datetime, timedelta
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -127,8 +128,9 @@ class JobService:
         self, use_case: str, max_count: int, lease_duration: timedelta
     ) -> list[Job]:
         """
-        Lease jobs for a use case.
+        Atomically lease jobs for a use case.
 
+        Uses atomic UPDATE with FOR UPDATE SKIP LOCKED to prevent race conditions.
         Returns jobs that are ready to run, marks them as running,
         and sets lease expiration.
         """
@@ -142,24 +144,31 @@ class JobService:
         if available_slots <= 0:
             return []
 
-        # Select pending jobs
-        jobs = await self.store.select_pending_jobs_for_scheduling(use_case, available_slots, now)
-
-        if not jobs:
-            return []
-
-        # Mark as running and lease
-        job_ids = [job.id for job in jobs]
+        # Atomically lease jobs
         lease_expires_at = now + lease_duration
-        await self.store.mark_jobs_as_running_and_lease(job_ids, lease_expires_at)
+        jobs = await self.store.lease_pending_jobs_atomically(
+            use_case, available_slots, now, lease_expires_at
+        )
 
-        # Reload jobs to get updated state
-        leased_jobs = []
-        for job_id in job_ids:
-            job = await self.store.get_job(job_id)
-            leased_jobs.append(job)
+        return jobs
 
-        return leased_jobs
+    async def revert_expired_leases(self) -> int:
+        """
+        Revert jobs with expired leases.
+        
+        This should be called periodically to recover from worker crashes.
+        Returns the number of jobs reverted.
+        """
+        now = datetime.utcnow()
+        count = await self.store.revert_expired_leases(now)
+        if count > 0:
+            self.logger.info(f"Reverted {count} jobs with expired leases")
+        return count
+
+    async def mark_job_enqueue_failed(self, job_id: UUID, error: dict[str, Any]) -> None:
+        """Mark a job as having failed to enqueue to SQS."""
+        await self.store.mark_job_enqueue_failed(job_id, error)
+        self.logger.error(f"Job {job_id} failed to enqueue to SQS")
 
     async def mark_job_succeeded(self, job_id: UUID) -> None:
         """Mark a job as succeeded."""
@@ -167,10 +176,24 @@ class JobService:
         self.logger.info(f"Job {job_id} succeeded")
 
     async def mark_job_retry(
-        self, job_id: UUID, error: dict[str, Any], backoff_seconds: int
+        self, job_id: UUID, error: dict[str, Any], backoff_seconds: int, deadline_at: datetime
     ) -> None:
-        """Mark a job for retry with backoff."""
+        """
+        Mark a job for retry with backoff.
+        
+        Checks if retry would exceed deadline and marks as dead instead if so.
+        """
         next_run_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
+        
+        # Check if retry would exceed deadline
+        if next_run_at > deadline_at:
+            self.logger.warning(
+                f"Job {job_id} retry would exceed deadline {deadline_at}, marking as dead"
+            )
+            error["reason"] = "Retry would exceed deadline"
+            await self.store.update_job_dead(job_id, error)
+            return
+        
         await self.store.update_job_retry(job_id, error, next_run_at)
         self.logger.info(f"Job {job_id} scheduled for retry at {next_run_at}")
 

@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import asyncpg
@@ -18,6 +18,8 @@ async def run_scheduler_loop(
     sqs_client: Any,
     logger: logging.Logger,
     loop_interval_seconds: int = 5,
+    lease_reaper_interval_seconds: int = 60,
+    shutdown_event: asyncio.Event = None,
 ) -> None:
     """
     Run the scheduler loop that leases pending jobs and sends them to SQS.
@@ -28,14 +30,34 @@ async def run_scheduler_loop(
         sqs_client: AWS SQS client (boto3/aioboto3)
         logger: Logger instance
         loop_interval_seconds: Time to sleep between iterations
+        lease_reaper_interval_seconds: Time between lease reaper runs
+        shutdown_event: Optional event to signal shutdown
     """
     job_service = JobService(config, db_pool, logger)
     lease_duration = timedelta(minutes=10)
 
     logger.info("Starting scheduler loop")
 
+    last_reaper_run = datetime.utcnow()
+
     while True:
+        # Check for shutdown signal
+        if shutdown_event and shutdown_event.is_set():
+            logger.info("Shutdown signal received, exiting scheduler loop")
+            break
+
         try:
+            # Run lease reaper periodically
+            now = datetime.utcnow()
+            if (now - last_reaper_run).total_seconds() >= lease_reaper_interval_seconds:
+                try:
+                    reverted_count = await job_service.revert_expired_leases()
+                    if reverted_count > 0:
+                        logger.info(f"Lease reaper reverted {reverted_count} expired jobs")
+                    last_reaper_run = now
+                except Exception as e:
+                    logger.error(f"Error in lease reaper: {str(e)}", exc_info=True)
+
             # Process each use case
             for use_case, use_case_config in config.per_use_case_config.items():
                 max_concurrent = use_case_config["max_concurrent"]
@@ -63,7 +85,12 @@ async def run_scheduler_loop(
                             logger.debug(f"Sent job {job.id} to SQS queue {queue_url}")
                         except Exception as e:
                             logger.error(f"Failed to send job {job.id} to SQS: {str(e)}")
-                            # Job will be rescheduled when lease expires
+                            # Mark job as enqueue failed - it will be reverted to pending
+                            error = {
+                                "error": f"Failed to send to SQS: {str(e)}",
+                                "timestamp": datetime.utcnow().isoformat(),
+                            }
+                            await job_service.mark_job_enqueue_failed(job.id, error)
 
         except Exception as e:
             logger.error(f"Error in scheduler loop: {str(e)}", exc_info=True)

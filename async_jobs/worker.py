@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import random
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -25,6 +26,7 @@ async def run_worker_loop(
     logger: logging.Logger,
     max_messages: int = 10,
     wait_time_seconds: int = 20,
+    shutdown_event: asyncio.Event = None,
 ) -> None:
     """
     Run the worker loop that processes jobs from SQS.
@@ -38,12 +40,18 @@ async def run_worker_loop(
         logger: Logger instance
         max_messages: Maximum messages to receive per poll
         wait_time_seconds: Long polling wait time
+        shutdown_event: Optional event to signal shutdown
     """
     job_service = JobService(config, db_pool, logger)
 
     logger.info(f"Starting worker loop for queue {queue_url}")
 
     while True:
+        # Check for shutdown signal
+        if shutdown_event and shutdown_event.is_set():
+            logger.info("Shutdown signal received, exiting worker loop")
+            break
+
         try:
             # Long poll SQS for messages
             response = await sqs_client.receive_message(
@@ -91,6 +99,18 @@ async def run_worker_loop(
                         )
                         continue
 
+                    # Validate lease hasn't expired
+                    now = datetime.utcnow()
+                    if job.lease_expires_at and job.lease_expires_at < now:
+                        logger.warning(
+                            f"Job {job_id} lease has expired (lease_expires_at={job.lease_expires_at}), "
+                            f"deleting message"
+                        )
+                        await sqs_client.delete_message(
+                            QueueUrl=queue_url, ReceiptHandle=receipt_handle
+                        )
+                        continue
+
                     # Get handler
                     handler = registry.get_handler(job.type)
                     if not handler:
@@ -106,7 +126,7 @@ async def run_worker_loop(
                         continue
 
                     # Execute handler
-                    logger.info(f"Executing job {job_id} (type={job.type})")
+                    logger.info(f"Executing job {job_id} (type={job.type}, attempt={job.attempts + 1})")
 
                     try:
                         # Create context for handler
@@ -132,17 +152,22 @@ async def run_worker_loop(
                             "timestamp": datetime.utcnow().isoformat(),
                         }
 
+                        # Current attempt number (incremented from db value)
+                        next_attempt = job.attempts + 1
+
                         # Check if we should retry
-                        if job.attempts + 1 < job.max_attempts:
-                            # Calculate backoff
-                            backoff_seconds = _calculate_backoff(
-                                job.backoff_policy, job.attempts + 1
+                        if next_attempt < job.max_attempts:
+                            # Calculate backoff with jitter
+                            backoff_seconds = _calculate_backoff_with_jitter(
+                                job.backoff_policy, next_attempt
                             )
 
-                            await job_service.mark_job_retry(job.id, error, backoff_seconds)
+                            await job_service.mark_job_retry(
+                                job.id, error, backoff_seconds, job.deadline_at
+                            )
 
                             logger.info(
-                                f"Job {job_id} will retry (attempt {job.attempts + 1}/"
+                                f"Job {job_id} will retry (attempt {next_attempt}/"
                                 f"{job.max_attempts}) after {backoff_seconds}s"
                             )
                         else:
@@ -164,6 +189,26 @@ async def run_worker_loop(
         except Exception as e:
             logger.error(f"Error in worker loop: {str(e)}", exc_info=True)
             await asyncio.sleep(5)  # Brief pause before retrying
+
+
+def _calculate_backoff_with_jitter(backoff_policy: dict[str, Any], attempt: int) -> int:
+    """
+    Calculate backoff delay with jitter based on policy and attempt number.
+
+    Args:
+        backoff_policy: Backoff policy configuration
+        attempt: Current attempt number (1-indexed)
+
+    Returns:
+        Backoff delay in seconds with jitter applied
+    """
+    base_delay = _calculate_backoff(backoff_policy, attempt)
+    
+    # Add ±20% jitter to prevent thundering herd
+    jitter_factor = 1.0 + random.uniform(-0.2, 0.2)
+    jittered_delay = int(base_delay * jitter_factor)
+    
+    return max(1, jittered_delay)  # Ensure at least 1 second
 
 
 def _calculate_backoff(backoff_policy: dict[str, Any], attempt: int) -> int:
