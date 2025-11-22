@@ -20,7 +20,6 @@ async def main():
             tenant_id="tenant-123",
             use_case="notifications",
             type="send_email",
-            queue="async-notifications",
             payload={
                 "to": "user@example.com",
                 "subject": "Hello!",

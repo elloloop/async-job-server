@@ -18,7 +18,6 @@ class EnqueueJobRequest(BaseModel):
     tenant_id: str = Field(..., description="Tenant identifier")
     use_case: str = Field(..., description="Use case name")
     type: str = Field(..., description="Job type")
-    queue: str = Field(..., description="SQS queue name")
     payload: dict[str, Any] = Field(..., description="Job payload")
     run_at: Optional[str] = Field(None, description="ISO8601 timestamp for when to run")
     delay_tolerance_seconds: Optional[int] = Field(None, description="Delay tolerance in seconds")
@@ -95,6 +94,16 @@ def create_jobs_router(
         job_service = job_service_factory()
 
         try:
+            # Derive queue from use_case configuration
+            config = job_service.config
+            use_case_config = config.get_use_case_config(request.use_case)
+            if not use_case_config:
+                raise ValueError(f"Unknown use_case: {request.use_case}")
+            
+            queue = use_case_config.get("queue")
+            if not queue:
+                raise ValueError(f"No queue configured for use_case: {request.use_case}")
+
             # Parse run_at if provided
             run_at = None
             if request.run_at:
@@ -111,7 +120,7 @@ def create_jobs_router(
                 tenant_id=request.tenant_id,
                 use_case=request.use_case,
                 type=request.type,
-                queue=request.queue,
+                queue=queue,
                 payload=request.payload,
                 run_at=run_at,
                 delay_tolerance=delay_tolerance,
@@ -131,7 +140,10 @@ def create_jobs_router(
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     @router.get("/jobs/{job_id}", response_model=JobResponse)
-    async def get_job(job_id: UUID) -> JobResponse:
+    async def get_job(
+        job_id: UUID,
+        _: None = Depends(verify_auth_token),
+    ) -> JobResponse:
         """Get job information by ID."""
         job_service = job_service_factory()
 
@@ -149,6 +161,7 @@ def create_jobs_router(
         use_case: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 50,
+        _: None = Depends(verify_auth_token),
     ) -> ListJobsResponse:
         """List jobs with optional filters."""
         job_service = job_service_factory()

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import importlib
 import logging
+import os
 import signal
 import sys
 
@@ -12,15 +13,14 @@ import asyncpg
 
 from async_jobs import AsyncJobsConfig, job_registry, run_worker_loop
 
-# Global flag for graceful shutdown
-shutdown_requested = False
+# Global shutdown event
+shutdown_event = asyncio.Event()
 
 
 def handle_signal(signum, frame):
     """Handle shutdown signals."""
-    global shutdown_requested
     logging.info(f"Received signal {signum}, initiating graceful shutdown...")
-    shutdown_requested = True
+    shutdown_event.set()
 
 
 async def main(queue_url: str, handlers_module: str = None):
@@ -58,10 +58,22 @@ async def main(queue_url: str, handlers_module: str = None):
         # Create SQS client
         logger.info("Initializing SQS client")
         session = aioboto3.Session()
-        async with session.client("sqs") as sqs_client:
+        
+        # Get endpoint URL from environment if set (for Localstack)
+        endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+        
+        sqs_kwargs = {}
+        if endpoint_url:
+            sqs_kwargs["endpoint_url"] = endpoint_url
+            logger.info(f"Using SQS endpoint: {endpoint_url}")
+        
+        async with session.client("sqs", **sqs_kwargs) as sqs_client:
             # Run worker loop
             try:
-                await run_worker_loop(config, db_pool, sqs_client, job_registry, queue_url, logger)
+                await run_worker_loop(
+                    config, db_pool, sqs_client, job_registry, queue_url, logger,
+                    shutdown_event=shutdown_event
+                )
             except asyncio.CancelledError:
                 logger.info("Worker loop cancelled")
             finally:

@@ -35,7 +35,6 @@ class AsyncJobsHttpClient:
         tenant_id: str,
         use_case: str,
         type: str,
-        queue: str,
         payload: dict[str, Any],
         run_at: Optional[str] = None,
         delay_tolerance_seconds: Optional[int] = None,
@@ -49,9 +48,8 @@ class AsyncJobsHttpClient:
 
         Args:
             tenant_id: Tenant identifier
-            use_case: Use case name
+            use_case: Use case name (queue is derived from this)
             type: Job type
-            queue: SQS queue name
             payload: Job payload
             run_at: Optional ISO8601 timestamp
             delay_tolerance_seconds: Optional delay tolerance in seconds
@@ -76,7 +74,6 @@ class AsyncJobsHttpClient:
             "tenant_id": tenant_id,
             "use_case": use_case,
             "type": type,
-            "queue": queue,
             "payload": payload,
             "max_attempts": max_attempts,
             "priority": priority,
@@ -101,7 +98,9 @@ class AsyncJobsHttpClient:
                 data = response.json()
                 return UUID(data["job_id"])
         except httpx.HTTPStatusError as e:
-            raise RemoteHttpError(f"HTTP {e.response.status_code}: {e.response.text}") from e
+            # Truncate response text to avoid huge error messages
+            response_text = e.response.text[:500]
+            raise RemoteHttpError(f"HTTP {e.response.status_code}: {response_text}") from e
         except httpx.RequestError as e:
             raise RemoteHttpError(f"Request failed: {str(e)}") from e
         except (KeyError, ValueError) as e:
