@@ -77,6 +77,7 @@ jobs:
 
       - name: Run integration tests
         env:
+          USE_EXTERNAL_SERVICES: true
           ASYNC_JOBS_DB_DSN: postgresql://asyncjobs:asyncjobs@localhost/asyncjobs
           ASYNC_JOBS_SQS_QUEUE_NOTIFICATIONS: http://localhost:4566/000000000000/notifications
           ASYNC_JOBS_SQS_QUEUE_MESSAGE_LABELING: http://localhost:4566/000000000000/message-labeling
