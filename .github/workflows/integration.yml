@@ -1,0 +1,102 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: asyncjobs
+          POSTGRES_USER: asyncjobs
+          POSTGRES_PASSWORD: asyncjobs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: sqs
+          DEBUG: 1
+        ports:
+          - 4566:4566
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache Poetry installation
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/bin/poetry
+            ~/.local/share/pypoetry
+          key: poetry-${{ runner.os }}-1.7.0
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 - --version 1.7.0
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: poetry-deps-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-deps-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install
+
+      - name: Wait for LocalStack
+        run: |
+          timeout 60 bash -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "running"; do sleep 2; done' || echo "LocalStack may not be fully ready"
+
+      - name: Run integration tests
+        env:
+          USE_EXTERNAL_SERVICES: true
+          ASYNC_JOBS_DB_DSN: postgresql://asyncjobs:asyncjobs@localhost/asyncjobs
+          ASYNC_JOBS_SQS_QUEUE_NOTIFICATIONS: http://localhost:4566/000000000000/notifications
+          ASYNC_JOBS_SQS_QUEUE_MESSAGE_LABELING: http://localhost:4566/000000000000/message-labeling
+          ASYNC_JOBS_NOTIFICATIONS_MAX_CONCURRENT: 10
+          ASYNC_JOBS_NOTIFICATIONS_DEFAULT_DELAY_TOLERANCE_SECONDS: 300
+          ASYNC_JOBS_MESSAGE_LABELING_MAX_CONCURRENT: 5
+          ASYNC_JOBS_MESSAGE_LABELING_DEFAULT_DELAY_TOLERANCE_SECONDS: 600
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ENDPOINT_URL: http://localhost:4566
+        run: poetry run pytest tests/integration/ -v --cov=async_jobs --cov-report=term --cov-report=xml
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
