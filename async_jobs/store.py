@@ -274,11 +274,12 @@ class JobStore:
         Returns the number of jobs reverted.
         """
         async with self.db_pool.acquire() as conn:
-            # Revert to pending if attempts < max_attempts
+            # Revert to pending if the next attempt would still be below max_attempts
             result = await conn.execute(
                 """
                 UPDATE jobs
                 SET status = $1,
+                    attempts = attempts + 1,
                     lease_expires_at = NULL,
                     last_error = jsonb_build_object(
                         'error', 'Lease expired - worker may have crashed',
@@ -287,7 +288,7 @@ class JobStore:
                     updated_at = now()
                 WHERE status = $2
                   AND lease_expires_at < $4
-                  AND attempts < max_attempts
+                  AND attempts + 1 < max_attempts
                 """,
                 JobStatus.pending.value,
                 JobStatus.running.value,
@@ -303,6 +304,7 @@ class JobStore:
                 """
                 UPDATE jobs
                 SET status = $1,
+                    attempts = attempts + 1,
                     lease_expires_at = NULL,
                     last_error = jsonb_build_object(
                         'error', 'Lease expired after max attempts',
@@ -311,7 +313,7 @@ class JobStore:
                     updated_at = now()
                 WHERE status = $2
                   AND lease_expires_at < $4
-                  AND attempts >= max_attempts
+                  AND attempts + 1 >= max_attempts
                 """,
                 JobStatus.dead.value,
                 JobStatus.running.value,
