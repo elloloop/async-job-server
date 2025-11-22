@@ -22,9 +22,7 @@ from async_jobs.config import AsyncJobsConfig
 from async_jobs.ddl import JOBS_TABLE_DDL
 from async_jobs.models import JobStatus
 from async_jobs.registry import JobRegistry
-from async_jobs.scheduler import run_scheduler_loop
 from async_jobs.service import JobService
-from async_jobs.worker import run_worker_loop
 
 # Set up logging
 logging.basicConfig(
@@ -39,27 +37,38 @@ def use_external_services():
     return os.getenv("USE_EXTERNAL_SERVICES", "false").lower() == "true"
 
 
-@pytest.fixture
-def config():
-    """Create test configuration."""
+@pytest.fixture(scope="session")
+def postgres_container():
+    """Provide PostgreSQL container for local testing."""
     if use_external_services():
-        # Use environment variables (CI mode)
-        return AsyncJobsConfig.from_env()
+        # In CI mode, no container needed
+        yield None
     else:
         # Use testcontainers (local development)
         pytest.importorskip("testcontainers")
         from testcontainers.postgres import PostgresContainer
 
         with PostgresContainer("postgres:15") as postgres:
-            return AsyncJobsConfig(
-                db_dsn=postgres.get_connection_url(),
-                sqs_queue_notifications="http://localhost:4566/000000000000/notifications",
-                sqs_queue_message_labeling="http://localhost:4566/000000000000/message-labeling",
-                notifications_max_concurrent=10,
-                notifications_default_delay_tolerance_seconds=300,
-                message_labeling_max_concurrent=5,
-                message_labeling_default_delay_tolerance_seconds=600,
-            )
+            yield postgres
+
+
+@pytest.fixture
+def config(postgres_container):
+    """Create test configuration."""
+    if use_external_services():
+        # Use environment variables (CI mode)
+        return AsyncJobsConfig.from_env()
+    else:
+        # Use testcontainers (local development)
+        return AsyncJobsConfig(
+            db_dsn=postgres_container.get_connection_url(),
+            sqs_queue_notifications="http://localhost:4566/000000000000/notifications",
+            sqs_queue_message_labeling="http://localhost:4566/000000000000/message-labeling",
+            notifications_max_concurrent=10,
+            notifications_default_delay_tolerance_seconds=300,
+            message_labeling_max_concurrent=5,
+            message_labeling_default_delay_tolerance_seconds=600,
+        )
 
 
 @pytest.fixture
