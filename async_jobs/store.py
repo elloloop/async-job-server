@@ -81,7 +81,7 @@ class JobStore:
     ) -> list[Job]:
         """List jobs with optional filters."""
         query = "SELECT * FROM jobs WHERE 1=1"
-        params = []
+        params: list[str | int] = []
         param_idx = 1
 
         if tenant_id:
