@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 import asyncpg
 
@@ -19,7 +19,7 @@ async def run_scheduler_loop(
     logger: logging.Logger,
     loop_interval_seconds: int = 5,
     lease_reaper_interval_seconds: int = 60,
-    shutdown_event: asyncio.Event = None,
+    shutdown_event: Optional[asyncio.Event] = None,
 ) -> None:
     """
     Run the scheduler loop that leases pending jobs and sends them to SQS.

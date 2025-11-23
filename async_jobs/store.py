@@ -119,7 +119,7 @@ class JobStore:
                 use_case,
                 JobStatus.pending.value,
             )
-        return count
+        return int(count) if count is not None else 0
 
     async def count_running_jobs_for_use_case(self, use_case: str) -> int:
         """Count running jobs for a use case."""
@@ -132,7 +132,7 @@ class JobStore:
                 use_case,
                 JobStatus.running.value,
             )
-        return count
+        return int(count) if count is not None else 0
 
     async def lease_pending_jobs_atomically(
         self, use_case: str, limit: int, now: datetime, lease_expires_at: datetime

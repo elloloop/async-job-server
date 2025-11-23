@@ -129,7 +129,7 @@ class AsyncJobsHttpClient:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
-                return response.json()
+                return dict(response.json())
         except httpx.HTTPStatusError as e:
             raise RemoteHttpError(f"HTTP {e.response.status_code}: {e.response.text}") from e
         except httpx.RequestError as e:

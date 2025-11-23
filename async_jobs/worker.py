@@ -5,7 +5,7 @@ import json
 import logging
 import random
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 import asyncpg
@@ -26,7 +26,7 @@ async def run_worker_loop(
     logger: logging.Logger,
     max_messages: int = 10,
     wait_time_seconds: int = 20,
-    shutdown_event: asyncio.Event = None,
+    shutdown_event: Optional[asyncio.Event] = None,
 ) -> None:
     """
     Run the worker loop that processes jobs from SQS.
@@ -231,15 +231,15 @@ def _calculate_backoff(backoff_policy: dict[str, Any], attempt: int) -> int:
         # Exponential backoff: base * 2^(attempt-1)
         # Capped at 1 hour
         delay = base_seconds * (2 ** (attempt - 1))
-        return min(delay, 3600)
+        return int(min(delay, 3600))
     elif policy_type == "linear":
         # Linear backoff: base * attempt
         delay = base_seconds * attempt
-        return min(delay, 3600)
+        return int(min(delay, 3600))
     elif policy_type == "constant":
         # Constant backoff
-        return base_seconds
+        return int(base_seconds)
     else:
         # Default to exponential
         delay = base_seconds * (2 ** (attempt - 1))
-        return min(delay, 3600)
+        return int(min(delay, 3600))
