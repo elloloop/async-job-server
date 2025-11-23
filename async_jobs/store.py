@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -31,7 +31,7 @@ class JobStore:
         max_attempts: int,
         backoff_policy: dict[str, Any],
         priority: int = 0,
-        dedupe_key: Optional[str] = None,
+        dedupe_key: str | None = None,
     ) -> Job:
         """Insert a new job into the database."""
         async with self.db_pool.acquire() as conn:
@@ -74,14 +74,14 @@ class JobStore:
 
     async def list_jobs(
         self,
-        tenant_id: Optional[str] = None,
-        use_case: Optional[str] = None,
-        status: Optional[str] = None,
+        tenant_id: str | None = None,
+        use_case: str | None = None,
+        status: str | None = None,
         limit: int = 50,
     ) -> list[Job]:
         """List jobs with optional filters."""
         query = "SELECT * FROM jobs WHERE 1=1"
-        params = []
+        params: list[str | int] = []
         param_idx = 1
 
         if tenant_id:
@@ -119,7 +119,7 @@ class JobStore:
                 use_case,
                 JobStatus.pending.value,
             )
-        return count
+        return int(count) if count is not None else 0
 
     async def count_running_jobs_for_use_case(self, use_case: str) -> int:
         """Count running jobs for a use case."""
@@ -132,14 +132,14 @@ class JobStore:
                 use_case,
                 JobStatus.running.value,
             )
-        return count
+        return int(count) if count is not None else 0
 
     async def lease_pending_jobs_atomically(
         self, use_case: str, limit: int, now: datetime, lease_expires_at: datetime
     ) -> list[Job]:
         """
         Atomically lease pending jobs for scheduling.
-        
+
         Uses FOR UPDATE SKIP LOCKED to ensure only one scheduler can lease each job.
         Returns jobs that were successfully leased.
         """
@@ -174,7 +174,7 @@ class JobStore:
     ) -> list[Job]:
         """
         DEPRECATED: Use lease_pending_jobs_atomically instead.
-        
+
         Select pending jobs for scheduling, ordered by deadline.
         """
         async with self.db_pool.acquire() as conn:
@@ -200,7 +200,7 @@ class JobStore:
     ) -> None:
         """
         DEPRECATED: Use lease_pending_jobs_atomically instead.
-        
+
         Mark jobs as running and set lease expiration.
         """
         async with self.db_pool.acquire() as conn:
@@ -270,7 +270,7 @@ class JobStore:
     async def revert_expired_leases(self, now: datetime, max_attempts: int = 5) -> int:
         """
         Revert jobs with expired leases back to pending or mark as dead.
-        
+
         Returns the number of jobs reverted.
         """
         async with self.db_pool.acquire() as conn:
@@ -294,10 +294,10 @@ class JobStore:
                 now.isoformat(),
                 now,
             )
-            
+
             # Extract count from result string like "UPDATE 5"
             reverted_count = int(result.split()[-1]) if result else 0
-            
+
             # Mark as dead if attempts >= max_attempts
             dead_result = await conn.execute(
                 """
@@ -318,9 +318,9 @@ class JobStore:
                 now.isoformat(),
                 now,
             )
-            
+
             dead_count = int(dead_result.split()[-1]) if dead_result else 0
-            
+
             return reverted_count + dead_count
 
     async def mark_job_enqueue_failed(self, job_id: UUID, error: dict[str, Any]) -> None:
@@ -350,22 +350,26 @@ class JobStore:
             type=row["type"],
             queue=row["queue"],
             status=JobStatus(row["status"]),
-            payload=json.loads(row["payload"])
-            if isinstance(row["payload"], str)
-            else row["payload"],
+            payload=(
+                json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+            ),
             run_at=row["run_at"],
             delay_tolerance=row["delay_tolerance"],
             deadline_at=row["deadline_at"],
             priority=row["priority"],
             attempts=row["attempts"],
             max_attempts=row["max_attempts"],
-            backoff_policy=json.loads(row["backoff_policy"])
-            if isinstance(row["backoff_policy"], str)
-            else row["backoff_policy"],
+            backoff_policy=(
+                json.loads(row["backoff_policy"])
+                if isinstance(row["backoff_policy"], str)
+                else row["backoff_policy"]
+            ),
             lease_expires_at=row["lease_expires_at"],
-            last_error=json.loads(row["last_error"])
-            if row["last_error"] and isinstance(row["last_error"], str)
-            else row["last_error"],
+            last_error=(
+                json.loads(row["last_error"])
+                if row["last_error"] and isinstance(row["last_error"], str)
+                else row["last_error"]
+            ),
             dedupe_key=row["dedupe_key"],
             enqueue_failed=row["enqueue_failed"],
             created_at=row["created_at"],

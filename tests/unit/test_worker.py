@@ -1,6 +1,5 @@
 """Unit tests for worker backoff calculation."""
 
-
 from async_jobs.worker import _calculate_backoff
 
 

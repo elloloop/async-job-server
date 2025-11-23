@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -19,11 +19,11 @@ class EnqueueJobRequest(BaseModel):
     use_case: str = Field(..., description="Use case name")
     type: str = Field(..., description="Job type")
     payload: dict[str, Any] = Field(..., description="Job payload")
-    run_at: Optional[str] = Field(None, description="ISO8601 timestamp for when to run")
-    delay_tolerance_seconds: Optional[int] = Field(None, description="Delay tolerance in seconds")
+    run_at: str | None = Field(None, description="ISO8601 timestamp for when to run")
+    delay_tolerance_seconds: int | None = Field(None, description="Delay tolerance in seconds")
     max_attempts: int = Field(5, description="Maximum retry attempts")
-    backoff_policy: Optional[dict[str, Any]] = Field(None, description="Retry backoff policy")
-    dedupe_key: Optional[str] = Field(None, description="Deduplication key")
+    backoff_policy: dict[str, Any] | None = Field(None, description="Retry backoff policy")
+    dedupe_key: str | None = Field(None, description="Deduplication key")
     priority: int = Field(0, description="Job priority")
 
 
@@ -50,9 +50,9 @@ class JobResponse(BaseModel):
     attempts: int
     max_attempts: int
     backoff_policy: dict[str, Any]
-    lease_expires_at: Optional[str]
-    last_error: Optional[dict[str, Any]]
-    dedupe_key: Optional[str]
+    lease_expires_at: str | None
+    last_error: dict[str, Any] | None
+    dedupe_key: str | None
     enqueue_failed: bool
     created_at: str
     updated_at: str
@@ -66,7 +66,7 @@ class ListJobsResponse(BaseModel):
 
 def create_jobs_router(
     job_service_factory: Callable[[], JobService],
-    auth_token: Optional[str] = None,
+    auth_token: str | None = None,
 ) -> APIRouter:
     """
     Create a FastAPI router for async jobs.
@@ -80,7 +80,7 @@ def create_jobs_router(
     """
     router = APIRouter()
 
-    async def verify_auth_token(x_async_jobs_token: Optional[str] = Header(None)):
+    async def verify_auth_token(x_async_jobs_token: str | None = Header(None)):
         """Verify authentication token if configured."""
         if auth_token and x_async_jobs_token != auth_token:
             raise HTTPException(status_code=401, detail="Invalid or missing auth token")
@@ -99,7 +99,7 @@ def create_jobs_router(
             use_case_config = config.get_use_case_config(request.use_case)
             if not use_case_config:
                 raise ValueError(f"Unknown use_case: {request.use_case}")
-            
+
             queue = use_case_config.get("queue")
             if not queue:
                 raise ValueError(f"No queue configured for use_case: {request.use_case}")
@@ -157,9 +157,9 @@ def create_jobs_router(
 
     @router.get("/jobs", response_model=ListJobsResponse)
     async def list_jobs(
-        tenant_id: Optional[str] = None,
-        use_case: Optional[str] = None,
-        status: Optional[str] = None,
+        tenant_id: str | None = None,
+        use_case: str | None = None,
+        status: str | None = None,
         limit: int = 50,
         _: None = Depends(verify_auth_token),
     ) -> ListJobsResponse:

@@ -1,9 +1,8 @@
 """High-level service layer for job operations."""
 
 import logging
-import random
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -21,7 +20,7 @@ class JobService:
         self,
         config: AsyncJobsConfig,
         db_pool: asyncpg.Pool,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
     ):
         self.config = config
         self.store = JobStore(db_pool)
@@ -35,11 +34,11 @@ class JobService:
         type: str,
         queue: str,
         payload: dict[str, Any],
-        run_at: Optional[datetime] = None,
-        delay_tolerance: Optional[timedelta] = None,
+        run_at: datetime | None = None,
+        delay_tolerance: timedelta | None = None,
         max_attempts: int = 5,
-        backoff_policy: Optional[dict[str, Any]] = None,
-        dedupe_key: Optional[str] = None,
+        backoff_policy: dict[str, Any] | None = None,
+        dedupe_key: str | None = None,
         priority: int = 0,
     ) -> UUID:
         """
@@ -114,9 +113,9 @@ class JobService:
     async def list_jobs(
         self,
         *,
-        tenant_id: Optional[str] = None,
-        use_case: Optional[str] = None,
-        status: Optional[str] = None,
+        tenant_id: str | None = None,
+        use_case: str | None = None,
+        status: str | None = None,
         limit: int = 50,
     ) -> list[Job]:
         """List jobs with optional filters."""
@@ -155,7 +154,7 @@ class JobService:
     async def revert_expired_leases(self) -> int:
         """
         Revert jobs with expired leases.
-        
+
         This should be called periodically to recover from worker crashes.
         Returns the number of jobs reverted.
         """
@@ -180,11 +179,11 @@ class JobService:
     ) -> None:
         """
         Mark a job for retry with backoff.
-        
+
         Checks if retry would exceed deadline and marks as dead instead if so.
         """
         next_run_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
-        
+
         # Check if retry would exceed deadline
         if next_run_at > deadline_at:
             self.logger.warning(
@@ -193,7 +192,7 @@ class JobService:
             error["reason"] = "Retry would exceed deadline"
             await self.store.update_job_dead(job_id, error)
             return
-        
+
         await self.store.update_job_retry(job_id, error, next_run_at)
         self.logger.info(f"Job {job_id} scheduled for retry at {next_run_at}")
 

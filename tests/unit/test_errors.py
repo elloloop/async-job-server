@@ -1,6 +1,5 @@
 """Unit tests for errors module."""
 
-
 from async_jobs.errors import (
     AsyncJobsError,
     AuthTokenError,

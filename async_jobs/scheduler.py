@@ -19,7 +19,7 @@ async def run_scheduler_loop(
     logger: logging.Logger,
     loop_interval_seconds: int = 5,
     lease_reaper_interval_seconds: int = 60,
-    shutdown_event: asyncio.Event = None,
+    shutdown_event: asyncio.Event | None = None,
 ) -> None:
     """
     Run the scheduler loop that leases pending jobs and sends them to SQS.

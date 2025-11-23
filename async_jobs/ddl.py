@@ -8,7 +8,9 @@ CREATE TABLE jobs (
   type             TEXT NOT NULL,
   queue            TEXT NOT NULL,
 
-  status           TEXT NOT NULL CHECK (status IN ('pending', 'running', 'succeeded', 'dead', 'cancelled')),
+  status           TEXT NOT NULL CHECK (
+    status IN ('pending', 'running', 'succeeded', 'dead', 'cancelled')
+  ),
   payload          JSONB NOT NULL,
 
   run_at           TIMESTAMPTZ NOT NULL,

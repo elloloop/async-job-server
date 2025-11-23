@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 
@@ -35,12 +35,12 @@ class Job:
         attempts: int,
         max_attempts: int,
         backoff_policy: dict[str, Any],
-        lease_expires_at: Optional[datetime] = None,
-        last_error: Optional[dict[str, Any]] = None,
-        dedupe_key: Optional[str] = None,
+        lease_expires_at: datetime | None = None,
+        last_error: dict[str, Any] | None = None,
+        dedupe_key: str | None = None,
         enqueue_failed: bool = False,
-        created_at: Optional[datetime] = None,
-        updated_at: Optional[datetime] = None,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
     ):
         self.id = id
         self.tenant_id = tenant_id
@@ -80,9 +80,9 @@ class Job:
             "attempts": self.attempts,
             "max_attempts": self.max_attempts,
             "backoff_policy": self.backoff_policy,
-            "lease_expires_at": self.lease_expires_at.isoformat()
-            if self.lease_expires_at
-            else None,
+            "lease_expires_at": (
+                self.lease_expires_at.isoformat() if self.lease_expires_at else None
+            ),
             "last_error": self.last_error,
             "dedupe_key": self.dedupe_key,
             "enqueue_failed": self.enqueue_failed,

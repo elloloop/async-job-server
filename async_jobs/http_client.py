@@ -1,6 +1,6 @@
 """HTTP client for async jobs service."""
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -14,7 +14,7 @@ class AsyncJobsHttpClient:
     def __init__(
         self,
         base_url: str,
-        auth_token: Optional[str] = None,
+        auth_token: str | None = None,
         timeout: float = 5.0,
     ):
         """
@@ -36,11 +36,11 @@ class AsyncJobsHttpClient:
         use_case: str,
         type: str,
         payload: dict[str, Any],
-        run_at: Optional[str] = None,
-        delay_tolerance_seconds: Optional[int] = None,
+        run_at: str | None = None,
+        delay_tolerance_seconds: int | None = None,
         max_attempts: int = 5,
-        backoff_policy: Optional[dict[str, Any]] = None,
-        dedupe_key: Optional[str] = None,
+        backoff_policy: dict[str, Any] | None = None,
+        dedupe_key: str | None = None,
         priority: int = 0,
     ) -> UUID:
         """
@@ -129,7 +129,7 @@ class AsyncJobsHttpClient:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
-                return response.json()
+                return dict(response.json())
         except httpx.HTTPStatusError as e:
             raise RemoteHttpError(f"HTTP {e.response.status_code}: {e.response.text}") from e
         except httpx.RequestError as e:
