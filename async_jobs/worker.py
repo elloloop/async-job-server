@@ -127,8 +127,7 @@ async def run_worker_loop(
 
                     # Execute handler
                     logger.info(
-                        f"Executing job {job_id} (type={job.type}, "
-                        f"attempt={job.attempts + 1})"
+                        f"Executing job {job_id} (type={job.type}, " f"attempt={job.attempts + 1})"
                     )
 
                     try:
