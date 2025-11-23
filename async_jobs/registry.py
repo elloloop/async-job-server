@@ -1,7 +1,6 @@
 """Job handler registry."""
 
 from collections.abc import Callable
-from typing import Optional
 
 
 class JobRegistry:
@@ -26,7 +25,7 @@ class JobRegistry:
 
         return decorator
 
-    def get_handler(self, name: str) -> Optional[Callable]:
+    def get_handler(self, name: str) -> Callable | None:
         """Get a handler by name."""
         return self._handlers.get(name)
 

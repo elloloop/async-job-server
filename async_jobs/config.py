@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 
 
 class AsyncJobsConfig:
@@ -17,9 +17,9 @@ class AsyncJobsConfig:
         notifications_default_delay_tolerance_seconds: int,
         message_labeling_max_concurrent: int,
         message_labeling_default_delay_tolerance_seconds: int,
-        enqueue_auth_token: Optional[str] = None,
-        per_use_case_config: Optional[dict[str, Any]] = None,
-        per_tenant_quotas: Optional[dict[str, dict[str, int]]] = None,
+        enqueue_auth_token: str | None = None,
+        per_use_case_config: dict[str, Any] | None = None,
+        per_tenant_quotas: dict[str, dict[str, int]] | None = None,
     ):
         self.db_dsn = db_dsn
         self.sqs_queue_notifications = sqs_queue_notifications
@@ -100,11 +100,11 @@ class AsyncJobsConfig:
             per_tenant_quotas=per_tenant_quotas,
         )
 
-    def get_use_case_config(self, use_case: str) -> Optional[dict[str, Any]]:
+    def get_use_case_config(self, use_case: str) -> dict[str, Any] | None:
         """Get configuration for a specific use case."""
         return self.per_use_case_config.get(use_case)
 
-    def get_tenant_quota(self, tenant_id: str, use_case: str) -> Optional[int]:
+    def get_tenant_quota(self, tenant_id: str, use_case: str) -> int | None:
         """Get quota for a specific tenant and use case."""
         if tenant_id in self.per_tenant_quotas:
             return self.per_tenant_quotas[tenant_id].get(use_case)

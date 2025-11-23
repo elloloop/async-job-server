@@ -60,21 +60,26 @@ async def async_main(queue_url: str, handlers_module: str):
         # Create SQS client
         logger.info("Initializing SQS client")
         session = aioboto3.Session()
-        
+
         # Get endpoint URL from environment if set (for Localstack)
         endpoint_url = os.getenv("AWS_ENDPOINT_URL")
-        
+
         sqs_kwargs = {}
         if endpoint_url:
             sqs_kwargs["endpoint_url"] = endpoint_url
             logger.info(f"Using SQS endpoint: {endpoint_url}")
-        
+
         async with session.client("sqs", **sqs_kwargs) as sqs_client:
             # Run worker loop
             try:
                 await run_worker_loop(
-                    config, db_pool, sqs_client, job_registry, queue_url, logger,
-                    shutdown_event=shutdown_event
+                    config,
+                    db_pool,
+                    sqs_client,
+                    job_registry,
+                    queue_url,
+                    logger,
+                    shutdown_event=shutdown_event,
                 )
             except asyncio.CancelledError:
                 logger.info("Worker loop cancelled")

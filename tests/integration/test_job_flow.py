@@ -27,39 +27,39 @@ class MockSQSClient:
         self.messages: dict[str, list[dict]] = {}
         self.deleted_messages: list[str] = []
 
-    async def send_message(self, QueueUrl: str, MessageBody: str):
+    async def send_message(self, queue_url: str, message_body: str):
         """Mock send_message."""
-        if QueueUrl not in self.messages:
-            self.messages[QueueUrl] = []
+        if queue_url not in self.messages:
+            self.messages[queue_url] = []
 
         message = {
-            "MessageId": f"msg-{len(self.messages[QueueUrl])}",
-            "ReceiptHandle": f"receipt-{len(self.messages[QueueUrl])}",
-            "Body": MessageBody,
+            "MessageId": f"msg-{len(self.messages[queue_url])}",
+            "ReceiptHandle": f"receipt-{len(self.messages[queue_url])}",
+            "Body": message_body,
         }
-        self.messages[QueueUrl].append(message)
+        self.messages[queue_url].append(message)
         return {"MessageId": message["MessageId"]}
 
     async def receive_message(
         self,
-        QueueUrl: str,
-        MaxNumberOfMessages: int = 1,
-        WaitTimeSeconds: int = 0,
-        AttributeNames: list[str] = None,
+        queue_url: str,
+        max_number_of_messages: int = 1,
+        wait_time_seconds: int = 0,
+        attribute_names: list[str] = None,
     ):
         """Mock receive_message."""
-        if QueueUrl not in self.messages:
+        if queue_url not in self.messages:
             return {}
 
-        messages = self.messages[QueueUrl][:MaxNumberOfMessages]
+        messages = self.messages[queue_url][:max_number_of_messages]
         return {"Messages": messages} if messages else {}
 
-    async def delete_message(self, QueueUrl: str, ReceiptHandle: str):
+    async def delete_message(self, queue_url: str, receipt_handle: str):
         """Mock delete_message."""
-        self.deleted_messages.append(ReceiptHandle)
-        if QueueUrl in self.messages:
-            self.messages[QueueUrl] = [
-                m for m in self.messages[QueueUrl] if m["ReceiptHandle"] != ReceiptHandle
+        self.deleted_messages.append(receipt_handle)
+        if queue_url in self.messages:
+            self.messages[queue_url] = [
+                m for m in self.messages[queue_url] if m["ReceiptHandle"] != receipt_handle
             ]
         return {}
 

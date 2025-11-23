@@ -46,16 +46,17 @@ async def async_main():
         # Create SQS client
         logger.info("Initializing SQS client")
         session = aioboto3.Session()
-        
+
         # Get endpoint URL from environment if set (for Localstack)
         import os
+
         endpoint_url = os.getenv("AWS_ENDPOINT_URL")
-        
+
         sqs_kwargs = {}
         if endpoint_url:
             sqs_kwargs["endpoint_url"] = endpoint_url
             logger.info(f"Using SQS endpoint: {endpoint_url}")
-        
+
         async with session.client("sqs", **sqs_kwargs) as sqs_client:
             # Run scheduler loop
             try:

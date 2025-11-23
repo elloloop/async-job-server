@@ -103,8 +103,8 @@ async def run_worker_loop(
                     now = datetime.utcnow()
                     if job.lease_expires_at and job.lease_expires_at < now:
                         logger.warning(
-                            f"Job {job_id} lease has expired (lease_expires_at={job.lease_expires_at}), "
-                            f"deleting message"
+                            f"Job {job_id} lease has expired "
+                            f"(lease_expires_at={job.lease_expires_at}), deleting message"
                         )
                         await sqs_client.delete_message(
                             QueueUrl=queue_url, ReceiptHandle=receipt_handle
@@ -126,7 +126,10 @@ async def run_worker_loop(
                         continue
 
                     # Execute handler
-                    logger.info(f"Executing job {job_id} (type={job.type}, attempt={job.attempts + 1})")
+                    logger.info(
+                        f"Executing job {job_id} (type={job.type}, "
+                        f"attempt={job.attempts + 1})"
+                    )
 
                     try:
                         # Create context for handler
@@ -203,11 +206,11 @@ def _calculate_backoff_with_jitter(backoff_policy: dict[str, Any], attempt: int)
         Backoff delay in seconds with jitter applied
     """
     base_delay = _calculate_backoff(backoff_policy, attempt)
-    
+
     # Add ±20% jitter to prevent thundering herd
     jitter_factor = 1.0 + random.uniform(-0.2, 0.2)
     jittered_delay = int(base_delay * jitter_factor)
-    
+
     return max(1, jittered_delay)  # Ensure at least 1 second
 
 

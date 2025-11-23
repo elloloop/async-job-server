@@ -7,7 +7,6 @@ It can run in two modes:
 2. With external services (CI mode) - uses environment-provided services
 """
 
-import asyncio
 import json
 import logging
 import os
@@ -99,12 +98,12 @@ async def clean_queues(sqs_client, config):
         await sqs_client.purge_queue(QueueUrl=config.sqs_queue_notifications)
     except Exception as e:
         logger.warning(f"Could not purge notifications queue: {e}")
-    
+
     try:
         await sqs_client.purge_queue(QueueUrl=config.sqs_queue_message_labeling)
     except Exception as e:
         logger.warning(f"Could not purge message_labeling queue: {e}")
-    
+
     yield
 
 
@@ -157,7 +156,14 @@ def job_registry():
 
 
 @pytest.mark.asyncio
-async def test_end_to_end_job_flow(clean_db, clean_queues, db_pool, config, sqs_client, job_registry):
+async def test_end_to_end_job_flow(
+    clean_db,
+    clean_queues,
+    db_pool,
+    config,
+    sqs_client,
+    job_registry,
+):
     """
     Test the complete end-to-end flow:
     1. Enqueue a job
@@ -254,7 +260,14 @@ async def test_end_to_end_job_flow(clean_db, clean_queues, db_pool, config, sqs_
 
 
 @pytest.mark.asyncio
-async def test_multiple_jobs_different_use_cases(clean_db, clean_queues, db_pool, config, sqs_client, job_registry):
+async def test_multiple_jobs_different_use_cases(
+    clean_db,
+    clean_queues,
+    db_pool,
+    config,
+    sqs_client,
+    job_registry,
+):
     """
     Test handling multiple jobs across different use cases.
     """
@@ -334,7 +347,14 @@ async def test_multiple_jobs_different_use_cases(clean_db, clean_queues, db_pool
 
 
 @pytest.mark.asyncio
-async def test_job_failure_and_retry(clean_db, clean_queues, db_pool, config, sqs_client, job_registry):
+async def test_job_failure_and_retry(
+    clean_db,
+    clean_queues,
+    db_pool,
+    config,
+    sqs_client,
+    job_registry,
+):
     """
     Test job failure handling mechanism.
     """
