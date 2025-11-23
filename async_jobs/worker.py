@@ -5,7 +5,7 @@ import json
 import logging
 import random
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 import asyncpg
@@ -26,7 +26,7 @@ async def run_worker_loop(
     logger: logging.Logger,
     max_messages: int = 10,
     wait_time_seconds: int = 20,
-    shutdown_event: Optional[asyncio.Event] = None,
+    shutdown_event: asyncio.Event | None = None,
 ) -> None:
     """
     Run the worker loop that processes jobs from SQS.
