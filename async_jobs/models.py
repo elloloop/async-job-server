@@ -7,7 +7,16 @@ from uuid import UUID
 
 
 class JobStatus(Enum):
-    """Job status enumeration."""
+    """Job status enumeration.
+
+    Represents the lifecycle states of an async job:
+
+    - pending: Job created and waiting to be scheduled
+    - running: Job currently being executed by a worker
+    - succeeded: Job completed successfully
+    - dead: Job failed permanently after exhausting all retries
+    - cancelled: Job manually cancelled before completion
+    """
 
     pending = "pending"
     running = "running"
@@ -17,7 +26,33 @@ class JobStatus(Enum):
 
 
 class Job:
-    """Represents a job record."""
+    """Represents an async job record.
+
+    A Job encapsulates all information needed to execute an asynchronous task,
+    including scheduling constraints, retry policies, and execution state.
+
+    Attributes:
+        id: Unique job identifier (UUID)
+        tenant_id: Tenant that owns this job
+        use_case: Use case category (e.g., "notifications", "message_labeling")
+        type: Specific job type within the use case
+        queue: SQS queue URL for this job
+        status: Current job status (pending, running, succeeded, dead, cancelled)
+        payload: Job-specific data passed to the handler
+        run_at: Earliest time the job should run
+        delay_tolerance: How long the job can be delayed beyond run_at
+        deadline_at: Latest acceptable execution time (run_at + delay_tolerance)
+        priority: Job priority (higher values = higher priority)
+        attempts: Number of execution attempts so far
+        max_attempts: Maximum retry attempts before marking job as dead
+        backoff_policy: Retry backoff configuration dict
+        lease_expires_at: When the current execution lease expires (for failure recovery)
+        last_error: Error details from the most recent failed attempt
+        dedupe_key: Optional deduplication key to prevent duplicate jobs
+        enqueue_failed: Whether the job failed to enqueue to SQS
+        created_at: When the job was created
+        updated_at: When the job was last modified
+    """
 
     def __init__(
         self,
@@ -42,6 +77,30 @@ class Job:
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
     ):
+        """Initialize a Job instance.
+
+        Args:
+            id: Unique job identifier
+            tenant_id: Tenant identifier
+            use_case: Use case name (e.g., "notifications")
+            type: Specific job type (e.g., "send_email")
+            queue: SQS queue URL
+            status: Current job status
+            payload: Job data dictionary
+            run_at: Earliest execution time
+            delay_tolerance: Maximum acceptable delay
+            deadline_at: Latest execution time (run_at + delay_tolerance)
+            priority: Job priority (higher = more important)
+            attempts: Current attempt count
+            max_attempts: Maximum retry attempts
+            backoff_policy: Retry backoff configuration
+            lease_expires_at: Execution lease expiration time
+            last_error: Most recent error details
+            dedupe_key: Deduplication key
+            enqueue_failed: Whether SQS enqueue failed
+            created_at: Creation timestamp (defaults to now)
+            updated_at: Last update timestamp (defaults to now)
+        """
         self.id = id
         self.tenant_id = tenant_id
         self.use_case = use_case
@@ -64,7 +123,20 @@ class Job:
         self.updated_at = updated_at or datetime.utcnow()
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert job to dictionary representation."""
+        """Convert job to dictionary representation.
+
+        Serializes the job to a JSON-compatible dictionary with ISO format
+        timestamps and total_seconds for timedeltas.
+
+        Returns:
+            Dictionary containing all job attributes with serialized values
+
+        Example:
+            >>> job = Job(...)
+            >>> job_dict = job.to_dict()
+            >>> print(job_dict["status"])
+            "pending"
+        """
         return {
             "id": str(self.id),
             "tenant_id": self.tenant_id,

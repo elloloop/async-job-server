@@ -13,9 +13,38 @@ A reusable async job platform library for FastAPI projects with PostgreSQL job s
 - **Retry Logic**: Configurable backoff strategies (exponential, linear, constant)
 - **Job Registry**: Decorator-based handler registration
 
+## Documentation
+
+📚 **[View Full Documentation](https://elloloop.github.io/async-job-server/)** (GitHub Pages)
+
+Comprehensive documentation is available including:
+
+- **Quick Start Guide**: Get up and running quickly
+- **User Guide**: Detailed usage instructions and examples
+- **API Reference**: Auto-generated from source code docstrings
+- **Deployment Guide**: Production deployment on AWS ECS
+- **Development Guide**: Contributing and local development
+
+### Building Documentation Locally
+
+```bash
+# Install dependencies
+poetry install --with dev
+
+# Build HTML documentation
+cd docs
+make html
+
+# View documentation
+open build/html/index.html  # macOS
+xdg-open build/html/index.html  # Linux
+```
+
+The documentation is automatically built and deployed to GitHub Pages on every push to the main branch.
+
 ## Quick Start
 
-See full documentation in this README for setup instructions, API reference, and examples.
+See the [Quick Start Guide](https://elloloop.github.io/async-job-server/quickstart.html) in the full documentation.
 
 ## Testing
 
