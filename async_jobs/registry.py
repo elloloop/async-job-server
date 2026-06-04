@@ -10,13 +10,19 @@ class JobRegistry:
         self._handlers: dict[str, Callable] = {}
 
     def handler(self, name: str):
-        """
-        Decorator to register a job handler.
+        """Decorator to register a job handler.
 
-        Usage:
-            @registry.handler("send_notification")
-            async def send_notification(ctx, payload):
-                ...
+        Args:
+            name: Unique name for the job handler
+
+        Returns:
+            Decorator function that registers the handler
+
+        Example:
+            >>> registry = JobRegistry()
+            >>> @registry.handler("send_notification")
+            ... async def send_notification(ctx, payload):
+            ...     return {"status": "sent"}
         """
 
         def decorator(func: Callable):
